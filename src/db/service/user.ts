@@ -9,7 +9,7 @@ export const createUser = async (data: {
 }) => {
   console.log("========= CREATING USER ================");
   data.password = await bcrypt.hash(data.password, 10);
-  const [user] = db.insert(users).values(data).returning();
+  const [user] = await db.insert(users).values(data).returning();
   console.log(user);
   return user;
 };
