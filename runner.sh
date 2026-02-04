@@ -10,7 +10,7 @@ REMOTE=$(git rev-parse @{u})
 if [ "$LOCAL" != "$REMOTE" ]; then
   echo "🔄 Changes detected. Pulling & rebuilding..."
   git pull
-  docker compose build
+  docker compose up --build
 else
   echo "✅ No changes detected. Skipping build."
 fi
