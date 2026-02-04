@@ -16,6 +16,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_OPTIONS="--max-old-space-size=4096"
 
 # Build the application
 RUN npm run build
@@ -47,6 +48,3 @@ EXPOSE $PORT
 
 # Start the application
 CMD ["node", "server.js"]
-
-
-
