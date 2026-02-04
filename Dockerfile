@@ -47,3 +47,6 @@ EXPOSE $PORT
 
 # Start the application
 CMD ["node", "server.js"]
+
+
+
