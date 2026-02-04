@@ -14,10 +14,9 @@ import {
   Mic,
   Pencil,
   Trash2,
-  Save,
   Download,
-  MoreVertical,
-  Calendar,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 // Client-side types
@@ -62,19 +61,30 @@ export default function SalesPage() {
     key: "createdAt",
     direction: "desc",
   });
+
+  // Set default date filter to 30 days ago
+  const getDefaultDateFrom = () => {
+    const date = new Date();
+    date.setDate(date.getDate() - 30);
+    return date.toISOString().split("T")[0];
+  };
+
   const [filterConfig, setFilterConfig] = useState<FilterConfig>({
     productName: "",
     minPrice: "",
     maxPrice: "",
     minQuantity: "",
     maxQuantity: "",
-    dateFrom: "",
+    dateFrom: getDefaultDateFrom(),
     dateTo: "",
   });
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [showAddDropdown, setShowAddDropdown] = useState(false);
-  const [editingRow, setEditingRow] = useState<number | null>(null);
+  const [editingCell, setEditingCell] = useState<{
+    rowId: number;
+    field: keyof ClientSale;
+  } | null>(null);
   const [newRow, setNewRow] = useState<Partial<ClientSale>>({
     product_name: "",
     unit_price: 0,
@@ -85,6 +95,10 @@ export default function SalesPage() {
   });
   const [isAddingRow, setIsAddingRow] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(50);
 
   // Load initial data
   useEffect(() => {
@@ -212,6 +226,17 @@ export default function SalesPage() {
     return result;
   }, [sales, searchQuery, filterConfig, sortConfig]);
 
+  // Pagination calculations
+  const totalPages = Math.ceil(processedSales.length / rowsPerPage);
+  const startIndex = (currentPage - 1) * rowsPerPage;
+  const endIndex = startIndex + rowsPerPage;
+  const paginatedSales = processedSales.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, filterConfig, sortConfig]);
+
   const handleSort = (key: keyof ClientSale) => {
     setSortConfig((current) => ({
       key,
@@ -307,7 +332,7 @@ export default function SalesPage() {
         throw new Error(errorData.error || "Failed to update sale");
       }
 
-      setEditingRow(null);
+      setEditingCell(null);
       await fetchSales();
     } catch (error) {
       console.error("Error updating sale:", error);
@@ -387,21 +412,20 @@ export default function SalesPage() {
               }
             }
 
+            // If total_price changes and we have quantity, update unit_price
+            if (field === "total_price" && sale.quantity && sale.quantity > 0) {
+              const totalPrice = Number(value);
+              if (!isNaN(totalPrice)) {
+                updated.unit_price = totalPrice / sale.quantity;
+              }
+            }
+
             return updated;
           }
           return sale;
         }),
       );
     }
-  };
-
-  const calculateRowTotal = (sale: Partial<ClientSale>) => {
-    const unitPrice = Number(sale.unit_price || 0);
-    const quantity = Number(sale.quantity || 0);
-    const taxPercent = Number(sale.tax_percent || 0);
-    const subtotal = unitPrice * quantity;
-    const tax = subtotal * (taxPercent / 100);
-    return subtotal + tax;
   };
 
   const clearFilters = () => {
@@ -460,22 +484,22 @@ export default function SalesPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background p-8 flex items-center justify-center">
-        <div className="text-foreground">Loading sales data...</div>
+      <div className="min-h-screen bg-gray-50 p-8 flex items-center justify-center">
+        <div className="text-gray-700">Loading sales data...</div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-background p-8">
+      <div className="min-h-screen bg-gray-50 p-8">
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
           <p className="font-bold">Error</p>
           <p>{error}</p>
         </div>
         <button
           onClick={fetchSales}
-          className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
         >
           Retry
         </button>
@@ -484,25 +508,25 @@ export default function SalesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-8 w-full">
+    <div className="min-h-screen bg-gray-50 p-4 md:p-8 w-full">
       {/* Header */}
-      <header className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground mb-2">Sales Sheet</h1>
-        <p className="text-foreground/70">Manage and track your sales data</p>
+      <header className="mb-6">
+        <h1 className="text-3xl font-bold text-gray-800 mb-2">Sales Sheet</h1>
+        <p className="text-gray-600">Manage and track your sales data</p>
       </header>
 
       {/* Controls Bar */}
-      <div className="bg-background-sec rounded-xl p-4 mb-6 border border-primary/20">
+      <div className="bg-white rounded-lg p-4 mb-4 border border-gray-200 shadow-sm">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           {/* Search */}
           <div className="relative flex-1 max-w-lg">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-foreground/50 w-5 h-5" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
             <input
               type="text"
               placeholder="Search products..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-white border border-primary/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground"
+              className="w-full pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-gray-700"
             />
           </div>
 
@@ -510,7 +534,7 @@ export default function SalesPage() {
           <div className="flex items-center gap-3">
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
             >
               <Filter className="w-4 h-4" />
               Filters
@@ -519,22 +543,22 @@ export default function SalesPage() {
             <div className="relative">
               <button
                 onClick={() => setShowAddDropdown(!showAddDropdown)}
-                className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
               >
                 <Plus className="w-4 h-4" />
                 Add
               </button>
 
               {showAddDropdown && (
-                <div className="absolute right-0 mt-2 w-48 bg-white border border-primary/20 rounded-lg shadow-lg z-50">
-                  <button className="w-full px-4 py-3 text-left text-foreground hover:bg-primary-sec/30 flex items-center gap-3">
-                    <Mic className="w-4 h-4 text-primary" />
+                <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                  <button className="w-full px-4 py-3 text-left text-gray-700 hover:bg-gray-50 flex items-center gap-3">
+                    <Mic className="w-4 h-4 text-green-600" />
                     <span>Add with voice</span>
                   </button>
                   <button
                     onClick={() => {
                       setIsAddingRow(true);
-
+                      setShowAddDropdown(false);
                       setTimeout(() => {
                         tableBottomRef.current?.scrollIntoView({
                           behavior: "smooth",
@@ -542,9 +566,9 @@ export default function SalesPage() {
                         });
                       }, 100);
                     }}
-                    className="w-full px-4 py-3 text-left text-foreground hover:bg-primary-sec/30 flex items-center gap-3 border-t border-primary/20"
+                    className="w-full px-4 py-3 text-left text-gray-700 hover:bg-gray-50 flex items-center gap-3 border-t border-gray-200"
                   >
-                    <Pencil className="w-4 h-4 text-primary" />
+                    <Pencil className="w-4 h-4 text-green-600" />
                     <span>Add manually</span>
                   </button>
                 </div>
@@ -553,7 +577,7 @@ export default function SalesPage() {
 
             <button
               onClick={handleExport}
-              className="flex items-center gap-2 px-4 py-2 border border-primary text-primary rounded-lg hover:bg-primary-sec/20 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
             >
               <Download className="w-4 h-4" />
               Export
@@ -563,12 +587,12 @@ export default function SalesPage() {
 
         {/* Filters Panel */}
         {showFilters && (
-          <div className="mt-4 p-4 bg-white rounded-lg border border-primary/20">
+          <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-medium text-foreground">Filters</h3>
+              <h3 className="font-medium text-gray-800">Filters</h3>
               <button
                 onClick={clearFilters}
-                className="text-sm text-primary hover:text-primary/80"
+                className="text-sm text-green-600 hover:text-green-700"
               >
                 Clear all
               </button>
@@ -576,7 +600,7 @@ export default function SalesPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm text-foreground/70 mb-1">
+                <label className="block text-sm text-gray-600 mb-1">
                   Product Name
                 </label>
                 <input
@@ -588,13 +612,13 @@ export default function SalesPage() {
                       productName: e.target.value,
                     }))
                   }
-                  className="w-full px-3 py-2 border border-primary/30 rounded focus:outline-none focus:ring-1 focus:ring-primary/50 text-foreground"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-500 text-gray-700"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-sm text-foreground/70 mb-1">
+                  <label className="block text-sm text-gray-600 mb-1">
                     Min Price
                   </label>
                   <input
@@ -607,11 +631,11 @@ export default function SalesPage() {
                         minPrice: e.target.value,
                       }))
                     }
-                    className="w-full px-3 py-2 border border-primary/30 rounded focus:outline-none focus:ring-1 focus:ring-primary/50 text-foreground"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-500 text-gray-700"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-foreground/70 mb-1">
+                  <label className="block text-sm text-gray-600 mb-1">
                     Max Price
                   </label>
                   <input
@@ -624,14 +648,14 @@ export default function SalesPage() {
                         maxPrice: e.target.value,
                       }))
                     }
-                    className="w-full px-3 py-2 border border-primary/30 rounded focus:outline-none focus:ring-1 focus:ring-primary/50 text-foreground"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-500 text-gray-700"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-sm text-foreground/70 mb-1">
+                  <label className="block text-sm text-gray-600 mb-1">
                     Min Qty
                   </label>
                   <input
@@ -643,11 +667,11 @@ export default function SalesPage() {
                         minQuantity: e.target.value,
                       }))
                     }
-                    className="w-full px-3 py-2 border border-primary/30 rounded focus:outline-none focus:ring-1 focus:ring-primary/50 text-foreground"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-500 text-gray-700"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-foreground/70 mb-1">
+                  <label className="block text-sm text-gray-600 mb-1">
                     Max Qty
                   </label>
                   <input
@@ -659,13 +683,13 @@ export default function SalesPage() {
                         maxQuantity: e.target.value,
                       }))
                     }
-                    className="w-full px-3 py-2 border border-primary/30 rounded focus:outline-none focus:ring-1 focus:ring-primary/50 text-foreground"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-500 text-gray-700"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm text-foreground/70 mb-1">
+                <label className="block text-sm text-gray-600 mb-1">
                   Date From
                 </label>
                 <input
@@ -677,12 +701,12 @@ export default function SalesPage() {
                       dateFrom: e.target.value,
                     }))
                   }
-                  className="w-full px-3 py-2 border border-primary/30 rounded focus:outline-none focus:ring-1 focus:ring-primary/50 text-foreground"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-500 text-gray-700"
                 />
               </div>
 
               <div>
-                <label className="block text-sm text-foreground/70 mb-1">
+                <label className="block text-sm text-gray-600 mb-1">
                   Date To
                 </label>
                 <input
@@ -694,7 +718,7 @@ export default function SalesPage() {
                       dateTo: e.target.value,
                     }))
                   }
-                  className="w-full px-3 py-2 border border-primary/30 rounded focus:outline-none focus:ring-1 focus:ring-primary/50 text-foreground"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-500 text-gray-700"
                 />
               </div>
             </div>
@@ -703,26 +727,27 @@ export default function SalesPage() {
       </div>
 
       {/* Excel-like Table */}
-      <div className="bg-white rounded-xl border border-primary/20 overflow-hidden shadow-sm">
+      <div className="bg-white rounded-lg border border-gray-300 overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-background-sec border-b border-primary/20">
-              <tr>
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="bg-gray-100 border-b border-gray-300">
                 {[
-                  { key: "id", label: "ID" },
-                  { key: "product_name", label: "Product Name" },
-                  { key: "unit_price", label: "Unit Price" },
-                  { key: "quantity", label: "Quantity" },
-                  { key: "total_price", label: "Total Price" },
-                  { key: "tax_percent", label: "Tax %" },
-                  { key: "createdAt", label: "Created At" },
-                  { key: "actions", label: "Actions" },
+                  { key: "sr", label: "SR#", width: "w-4" },
+                  { key: "id", label: "ID", width: "w-16" },
+                  { key: "product_name", label: "Product Name", width: "w-64" },
+                  { key: "unit_price", label: "Unit Price", width: "w-32" },
+                  { key: "quantity", label: "Quantity", width: "w-24" },
+                  { key: "total_price", label: "Total Price", width: "w-32" },
+                  { key: "tax_percent", label: "Tax %", width: "w-24" },
+                  { key: "createdAt", label: "Created At", width: "w-32" },
+                  { key: "actions", label: "Actions", width: "w-4" },
                 ].map((column) => (
                   <th
                     key={column.key}
-                    className={`py-3 px-4 text-left text-sm font-medium text-foreground ${
+                    className={`${column.width} py-2 px-3 text-left text-xs font-semibold text-gray-700 border-r border-gray-300 last:border-r-0 ${
                       column.key !== "actions"
-                        ? "cursor-pointer hover:bg-primary-sec/30"
+                        ? "cursor-pointer hover:bg-gray-200"
                         : ""
                     }`}
                     onClick={() =>
@@ -733,21 +758,21 @@ export default function SalesPage() {
                     <div className="flex items-center justify-between">
                       {column.label}
                       {column.key !== "actions" && (
-                        <div className="flex flex-col ml-2">
+                        <div className="flex flex-col ml-1">
                           <ChevronUp
                             className={`w-3 h-3 ${
                               sortConfig.key === column.key &&
                               sortConfig.direction === "asc"
-                                ? "text-primary"
-                                : "text-foreground/30"
+                                ? "text-green-600"
+                                : "text-gray-400"
                             }`}
                           />
                           <ChevronDown
-                            className={`w-3 h-3 ${
+                            className={`w-3 h-3 -mt-1 ${
                               sortConfig.key === column.key &&
                               sortConfig.direction === "desc"
-                                ? "text-primary"
-                                : "text-foreground/30"
+                                ? "text-green-600"
+                                : "text-gray-400"
                             }`}
                           />
                         </div>
@@ -759,14 +784,27 @@ export default function SalesPage() {
             </thead>
             <tbody>
               {/* Existing Sales Rows */}
-              {processedSales.map((sale) => (
+              {paginatedSales.map((sale, index) => (
                 <tr
                   key={sale.id}
-                  className="border-b border-primary/10 hover:bg-background-sec/50 transition-colors"
+                  className={`border-b border-gray-200 hover:bg-blue-50 transition-colors ${
+                    index % 2 === 0 ? "bg-white" : "bg-gray-50"
+                  }`}
                 >
-                  <td className="py-3 px-4 text-foreground/80">{sale.id}</td>
-                  <td className="py-3 px-4">
-                    {editingRow === sale.id ? (
+                  <td className="py-2 px-2 text-sm text-gray-600 border-r border-gray-200">
+                    {index}
+                  </td>
+                  <td className="py-2 px-3 text-sm text-gray-600 border-r border-gray-200">
+                    {sale.id}
+                  </td>
+                  <td
+                    className="py-2 px-3 text-sm border-r border-gray-200 cursor-pointer"
+                    onDoubleClick={() =>
+                      setEditingCell({ rowId: sale.id, field: "product_name" })
+                    }
+                  >
+                    {editingCell?.rowId === sale.id &&
+                    editingCell?.field === "product_name" ? (
                       <input
                         type="text"
                         value={sale.product_name}
@@ -777,14 +815,30 @@ export default function SalesPage() {
                             e.target.value,
                           )
                         }
-                        className="w-full px-2 py-1 border border-primary/30 rounded text-foreground"
+                        onBlur={() => handleUpdateRow(sale.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            handleUpdateRow(sale.id);
+                          } else if (e.key === "Escape") {
+                            setEditingCell(null);
+                            fetchSales();
+                          }
+                        }}
+                        autoFocus
+                        className="w-full px-2 py-1 border border-blue-400 rounded text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     ) : (
-                      sale.product_name
+                      <span className="text-gray-800">{sale.product_name}</span>
                     )}
                   </td>
-                  <td className="py-3 px-4">
-                    {editingRow === sale.id ? (
+                  <td
+                    className="py-2 px-3 text-sm border-r border-gray-200 cursor-pointer"
+                    onDoubleClick={() =>
+                      setEditingCell({ rowId: sale.id, field: "unit_price" })
+                    }
+                  >
+                    {editingCell?.rowId === sale.id &&
+                    editingCell?.field === "unit_price" ? (
                       <input
                         type="number"
                         step="0.01"
@@ -796,14 +850,32 @@ export default function SalesPage() {
                             parseFloat(e.target.value) || 0,
                           )
                         }
-                        className="w-full px-2 py-1 border border-primary/30 rounded text-foreground"
+                        onBlur={() => handleUpdateRow(sale.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            handleUpdateRow(sale.id);
+                          } else if (e.key === "Escape") {
+                            setEditingCell(null);
+                            fetchSales();
+                          }
+                        }}
+                        autoFocus
+                        className="w-full px-2 py-1 border border-blue-400 rounded text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     ) : (
-                      `$${sale.unit_price.toFixed(2)}`
+                      <span className="text-gray-800">
+                        ${sale.unit_price.toFixed(2)}
+                      </span>
                     )}
                   </td>
-                  <td className="py-3 px-4">
-                    {editingRow === sale.id ? (
+                  <td
+                    className="py-2 px-3 text-sm border-r border-gray-200 cursor-pointer"
+                    onDoubleClick={() =>
+                      setEditingCell({ rowId: sale.id, field: "quantity" })
+                    }
+                  >
+                    {editingCell?.rowId === sale.id &&
+                    editingCell?.field === "quantity" ? (
                       <input
                         type="number"
                         value={sale.quantity}
@@ -814,17 +886,65 @@ export default function SalesPage() {
                             parseInt(e.target.value) || 0,
                           )
                         }
-                        className="w-full px-2 py-1 border border-primary/30 rounded text-foreground"
+                        onBlur={() => handleUpdateRow(sale.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            handleUpdateRow(sale.id);
+                          } else if (e.key === "Escape") {
+                            setEditingCell(null);
+                            fetchSales();
+                          }
+                        }}
+                        autoFocus
+                        className="w-full px-2 py-1 border border-blue-400 rounded text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     ) : (
-                      sale.quantity
+                      <span className="text-gray-800">{sale.quantity}</span>
                     )}
                   </td>
-                  <td className="py-3 px-4 font-medium">
-                    ${sale.total_price.toFixed(2)}
+                  <td
+                    className="py-2 px-3 text-sm font-medium text-gray-800 border-r border-gray-200 cursor-pointer"
+                    onDoubleClick={() =>
+                      setEditingCell({ rowId: sale.id, field: "total_price" })
+                    }
+                  >
+                    {editingCell?.rowId === sale.id &&
+                    editingCell?.field === "total_price" ? (
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={sale.total_price}
+                        onChange={(e) =>
+                          handleFieldChange(
+                            sale.id,
+                            "total_price",
+                            parseFloat(e.target.value) || 0,
+                          )
+                        }
+                        onBlur={() => handleUpdateRow(sale.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            handleUpdateRow(sale.id);
+                          } else if (e.key === "Escape") {
+                            setEditingCell(null);
+                            fetchSales();
+                          }
+                        }}
+                        autoFocus
+                        className="w-full px-2 py-1 border border-blue-400 rounded text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    ) : (
+                      <span>${sale.total_price.toFixed(2)}</span>
+                    )}
                   </td>
-                  <td className="py-3 px-4">
-                    {editingRow === sale.id ? (
+                  <td
+                    className="py-2 px-3 text-sm border-r border-gray-200 cursor-pointer"
+                    onDoubleClick={() =>
+                      setEditingCell({ rowId: sale.id, field: "tax_percent" })
+                    }
+                  >
+                    {editingCell?.rowId === sale.id &&
+                    editingCell?.field === "tax_percent" ? (
                       <input
                         type="number"
                         step="0.1"
@@ -836,45 +956,89 @@ export default function SalesPage() {
                             parseFloat(e.target.value) || 0,
                           )
                         }
-                        className="w-full px-2 py-1 border border-primary/30 rounded text-foreground"
+                        onBlur={() => handleUpdateRow(sale.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            handleUpdateRow(sale.id);
+                          } else if (e.key === "Escape") {
+                            setEditingCell(null);
+                            fetchSales();
+                          }
+                        }}
+                        autoFocus
+                        className="w-full px-2 py-1 border border-blue-400 rounded text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     ) : (
-                      `${(sale.tax_percent || 0).toFixed(1)}%`
+                      <span className="text-gray-800">
+                        {(sale.tax_percent || 0).toFixed(1)}%
+                      </span>
                     )}
                   </td>
-                  <td className="py-3 px-4 text-sm text-foreground/70">
-                    {formatDate(sale.createdAt)}
+                  <td
+                    className="py-2 px-3 text-sm text-gray-600 border-r border-gray-200 cursor-pointer"
+                    onDoubleClick={() =>
+                      setEditingCell({ rowId: sale.id, field: "createdAt" })
+                    }
+                  >
+                    {editingCell?.rowId === sale.id &&
+                    editingCell?.field === "createdAt" ? (
+                      <input
+                        type="date"
+                        value={sale.createdAt.split("T")[0]}
+                        onChange={(e) =>
+                          handleFieldChange(
+                            sale.id,
+                            "createdAt",
+                            new Date(e.target.value).toISOString(),
+                          )
+                        }
+                        onBlur={() => handleUpdateRow(sale.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            handleUpdateRow(sale.id);
+                          } else if (e.key === "Escape") {
+                            setEditingCell(null);
+                            fetchSales();
+                          }
+                        }}
+                        autoFocus
+                        className="w-full px-2 py-1 border border-blue-400 rounded text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    ) : (
+                      <span>{formatDate(sale.createdAt)}</span>
+                    )}
                   </td>
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-2">
-                      {editingRow === sale.id ? (
-                        <>
-                          <button
-                            onClick={() => handleUpdateRow(sale.id)}
-                            className="p-1.5 text-primary hover:bg-primary-sec/30 rounded"
-                            title="Save"
-                          >
-                            <Save className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => setEditingRow(null)}
-                            className="p-1.5 text-foreground/70 hover:bg-primary-sec/30 rounded"
-                            title="Cancel"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <button
-                            onClick={() => setEditingRow(sale.id)}
-                            className="p-1.5 text-primary hover:bg-primary-sec/30 rounded"
-                            title="Edit"
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </button>
-                        </>
-                      )}
+                  <td className="py-2 px-3 text-sm">
+                    <div className="flex items-center justify-center">
+                      <button
+                        onClick={async () => {
+                          if (
+                            confirm(
+                              "Are you sure you want to delete this sale?",
+                            )
+                          ) {
+                            try {
+                              const response = await fetch(
+                                `/api/sales/${sale.id}`,
+                                {
+                                  method: "DELETE",
+                                },
+                              );
+                              if (!response.ok) {
+                                throw new Error("Failed to delete sale");
+                              }
+                              await fetchSales();
+                            } catch (error) {
+                              console.error("Error deleting sale:", error);
+                              alert("Failed to delete sale");
+                            }
+                          }
+                        }}
+                        className="p-1 text-red-600 hover:bg-red-50 rounded"
+                        title="Delete"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -884,10 +1048,15 @@ export default function SalesPage() {
               {isAddingRow && (
                 <tr
                   ref={tableBottomRef}
-                  className="border-b border-primary/20 bg-primary-sec/10"
+                  className="border-b-2 border-green-400 bg-green-50"
                 >
-                  <td className="py-3 px-4 text-foreground/50">New</td>
-                  <td className="py-3 px-4">
+                  <td className="py-2 px-3 text-sm text-gray-500 border-r border-gray-200">
+                    --
+                  </td>
+                  <td className="py-2 px-3 text-sm text-gray-500 border-r border-gray-200">
+                    New
+                  </td>
+                  <td className="py-2 px-3 border-r border-gray-200">
                     <input
                       type="text"
                       value={newRow.product_name || ""}
@@ -895,10 +1064,10 @@ export default function SalesPage() {
                         handleFieldChange("new", "product_name", e.target.value)
                       }
                       placeholder="Product name"
-                      className="w-full px-3 py-2 border border-primary/50 rounded bg-white text-foreground"
+                      className="w-full px-2 py-1 border border-green-400 rounded bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500"
                     />
                   </td>
-                  <td className="py-3 px-4">
+                  <td className="py-2 px-3 border-r border-gray-200">
                     <input
                       type="number"
                       step="0.01"
@@ -911,10 +1080,10 @@ export default function SalesPage() {
                         )
                       }
                       placeholder="0.00"
-                      className="w-full px-3 py-2 border border-primary/50 rounded bg-white text-foreground"
+                      className="w-full px-2 py-1 border border-green-400 rounded bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500"
                     />
                   </td>
-                  <td className="py-3 px-4">
+                  <td className="py-2 px-3 border-r border-gray-200">
                     <input
                       type="number"
                       value={newRow.quantity || ""}
@@ -926,13 +1095,26 @@ export default function SalesPage() {
                         )
                       }
                       placeholder="1"
-                      className="w-full px-3 py-2 border border-primary/50 rounded bg-white text-foreground"
+                      className="w-full px-2 py-1 border border-green-400 rounded bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500"
                     />
                   </td>
-                  <td className="py-3 px-4 font-medium">
-                    ${calculateRowTotal(newRow).toFixed(2)}
+                  <td className="py-2 px-3 border-r border-gray-200">
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={newRow.total_price || ""}
+                      onChange={(e) =>
+                        handleFieldChange(
+                          "new",
+                          "total_price",
+                          parseFloat(e.target.value) || 0,
+                        )
+                      }
+                      placeholder="0.00"
+                      className="w-full px-2 py-1 border border-green-400 rounded bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
                   </td>
-                  <td className="py-3 px-4">
+                  <td className="py-2 px-3 border-r border-gray-200">
                     <input
                       type="number"
                       step="0.1"
@@ -945,17 +1127,32 @@ export default function SalesPage() {
                         )
                       }
                       placeholder="0.0"
-                      className="w-full px-3 py-2 border border-primary/50 rounded bg-white text-foreground"
+                      className="w-full px-2 py-1 border border-green-400 rounded bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500"
                     />
                   </td>
-                  <td className="py-3 px-4 text-sm text-foreground/70">
-                    {newRow.createdAt ? formatDate(newRow.createdAt) : "Today"}
+                  <td className="py-2 px-3 border-r border-gray-200">
+                    <input
+                      type="date"
+                      value={
+                        newRow.createdAt
+                          ? newRow.createdAt.split("T")[0]
+                          : new Date().toISOString().split("T")[0]
+                      }
+                      onChange={(e) =>
+                        handleFieldChange(
+                          "new",
+                          "createdAt",
+                          new Date(e.target.value).toISOString(),
+                        )
+                      }
+                      className="w-full px-2 py-1 border border-green-400 rounded bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
                   </td>
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-2">
+                  <td className="py-2 px-3">
+                    <div className="flex items-center gap-1">
                       <button
                         onClick={handleAddRow}
-                        className="px-3 py-1.5 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors text-sm"
+                        className="px-2 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700 transition-colors"
                       >
                         Save
                       </button>
@@ -964,7 +1161,7 @@ export default function SalesPage() {
                           setIsAddingRow(false);
                           resetNewRow();
                         }}
-                        className="px-3 py-1.5 border border-primary/30 text-primary rounded-lg hover:bg-primary-sec/20 transition-colors text-sm"
+                        className="px-2 py-1 border border-gray-300 text-gray-700 rounded text-xs hover:bg-gray-50 transition-colors"
                       >
                         Cancel
                       </button>
@@ -976,45 +1173,90 @@ export default function SalesPage() {
           </table>
         </div>
 
-        {/* Empty State */}
-        {processedSales.length === 0 && !isAddingRow && (
-          <div className="p-8 text-center text-foreground/60">
-            No sales data found. Add your first sale!
-          </div>
-        )}
+        {/* Pagination Controls */}
+        <div className="px-4 py-3 bg-gray-50 border-t border-gray-300 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setIsAddingRow(true)}
+              className="flex items-center gap-2 px-3 py-1.5 text-green-600 hover:bg-green-50 rounded transition-colors text-sm"
+            >
+              <Plus className="w-4 h-4" />
+              Add Row
+            </button>
 
-        {/* Add Row Button at Bottom */}
-        <div className="p-4 border-t border-primary/20">
-          <button
-            onClick={() => setIsAddingRow(true)}
-            className="flex items-center gap-2 px-4 py-2 text-primary hover:bg-primary-sec/20 rounded-lg transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            Add Row
-          </button>
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-gray-600">Rows per page:</label>
+              <select
+                value={rowsPerPage}
+                onChange={(e) => {
+                  setRowsPerPage(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="px-2 py-1 border border-gray-300 rounded text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-green-500"
+              >
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+                <option value={500}>500</option>
+                <option value={1000}>1000</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-gray-600">
+              Showing {startIndex + 1} to{" "}
+              {Math.min(endIndex, processedSales.length)} of{" "}
+              {processedSales.length} entries
+            </span>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="p-1 rounded border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ChevronLeft className="w-4 h-4 text-gray-600" />
+              </button>
+
+              <span className="text-sm text-gray-700 px-2">
+                Page {currentPage} of {totalPages || 1}
+              </span>
+
+              <button
+                onClick={() =>
+                  setCurrentPage((p) => Math.min(totalPages, p + 1))
+                }
+                disabled={currentPage === totalPages || totalPages === 0}
+                className="p-1 rounded border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ChevronRight className="w-4 h-4 text-gray-600" />
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Summary Stats */}
       <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-background-sec rounded-lg p-4 border border-primary/20">
-          <div className="text-sm text-foreground/70">Total Sales</div>
-          <div className="text-2xl font-bold text-foreground">
+        <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+          <div className="text-sm text-gray-600">Total Sales</div>
+          <div className="text-2xl font-bold text-gray-800">
             {processedSales.length}
           </div>
         </div>
-        <div className="bg-background-sec rounded-lg p-4 border border-primary/20">
-          <div className="text-sm text-foreground/70">Total Revenue</div>
-          <div className="text-2xl font-bold text-foreground">
+        <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+          <div className="text-sm text-gray-600">Total Revenue</div>
+          <div className="text-2xl font-bold text-gray-800">
             $
             {processedSales
               .reduce((sum, sale) => sum + sale.total_price, 0)
               .toFixed(2)}
           </div>
         </div>
-        <div className="bg-background-sec rounded-lg p-4 border border-primary/20">
-          <div className="text-sm text-foreground/70">Avg. Order Value</div>
-          <div className="text-2xl font-bold text-foreground">
+        <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+          <div className="text-sm text-gray-600">Avg. Order Value</div>
+          <div className="text-2xl font-bold text-gray-800">
             $
             {processedSales.length > 0
               ? (
@@ -1026,9 +1268,9 @@ export default function SalesPage() {
               : "0.00"}
           </div>
         </div>
-        <div className="bg-background-sec rounded-lg p-4 border border-primary/20">
-          <div className="text-sm text-foreground/70">Total Quantity</div>
-          <div className="text-2xl font-bold text-foreground">
+        <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+          <div className="text-sm text-gray-600">Total Quantity</div>
+          <div className="text-2xl font-bold text-gray-800">
             {processedSales.reduce((sum, sale) => sum + sale.quantity, 0)}
           </div>
         </div>
