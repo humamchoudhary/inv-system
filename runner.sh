@@ -1,20 +1,25 @@
 #!/bin/bash
 set -e
 
-echo "📦 Pulling latest code..."
+echo "📦 Checking for updates..."
 git fetch origin
 
 LOCAL=$(git rev-parse HEAD)
-REMOTE=$(git rev-parse @{u})
+REMOTE=$(git rev-parse origin/main)
 
 if [ "$LOCAL" != "$REMOTE" ]; then
-  echo "🔄 Changes detected. Pulling & rebuilding..."
-  git pull
-  docker compose up --build
+  echo "🔄 Changes detected! Pulling latest code..."
+  git pull origin main
+  
+  echo "🔨 Rebuilding Docker image..."
+  docker compose down
+  docker compose build
+  docker compose up -d
+  
+  echo "✨ Rebuild complete!"
 else
-  echo "✅ No changes detected. Skipping build."
+  echo "✅ Already up to date. Starting containers..."
+  docker compose up -d
 fi
 
-echo "🚀 Starting containers..."
-docker compose up -d
-
+echo "🚀 Application running on port 6003"
