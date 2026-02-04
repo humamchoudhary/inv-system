@@ -2,7 +2,6 @@
 "use client";
 
 import { useRef } from "react";
-
 import { useState, useEffect, useMemo } from "react";
 import {
   Plus,
@@ -17,7 +16,13 @@ import {
   Download,
   ChevronLeft,
   ChevronRight,
+  RefreshCw,
+  FileText,
+  FileSpreadsheet,
+  FileDown,
 } from "lucide-react";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
 
 // Client-side types
 type ClientSale = {
@@ -54,6 +59,24 @@ type FilterConfig = {
   dateTo: string;
 };
 
+type ExportFormat = "excel" | "csv" | "pdf";
+
+type ProductAnalytics = {
+  product_name: string;
+  total_quantity: number;
+  total_revenue: number;
+  avg_unit_price: number;
+  percentage_of_total: number;
+};
+
+type SalesAnalytics = {
+  total_sales: number;
+  total_revenue: number;
+  avg_order_value: number;
+  total_quantity: number;
+  date_range: string;
+};
+
 export default function SalesPage() {
   const [sales, setSales] = useState<ClientSale[]>([]);
   const [loading, setLoading] = useState(true);
@@ -81,6 +104,7 @@ export default function SalesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [showAddDropdown, setShowAddDropdown] = useState(false);
+  const [showExportDropdown, setShowExportDropdown] = useState(false);
   const [editingCell, setEditingCell] = useState<{
     rowId: number;
     field: keyof ClientSale;
@@ -95,6 +119,7 @@ export default function SalesPage() {
   });
   const [isAddingRow, setIsAddingRow] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -441,7 +466,63 @@ export default function SalesPage() {
     setSearchQuery("");
   };
 
-  const handleExport = () => {
+  const calculateAnalytics = (): SalesAnalytics & {
+    products: ProductAnalytics[];
+  } => {
+    const totalRevenue = processedSales.reduce(
+      (sum, sale) => sum + sale.total_price,
+      0,
+    );
+    const totalQuantity = processedSales.reduce(
+      (sum, sale) => sum + sale.quantity,
+      0,
+    );
+
+    // Group by product for product analytics
+    const productMap = new Map<string, ProductAnalytics>();
+
+    processedSales.forEach((sale) => {
+      if (!productMap.has(sale.product_name)) {
+        productMap.set(sale.product_name, {
+          product_name: sale.product_name,
+          total_quantity: 0,
+          total_revenue: 0,
+          avg_unit_price: 0,
+          percentage_of_total: 0,
+        });
+      }
+
+      const product = productMap.get(sale.product_name)!;
+      product.total_quantity += sale.quantity;
+      product.total_revenue += sale.total_price;
+    });
+
+    // Calculate averages and percentages
+    const products = Array.from(productMap.values()).map((product) => ({
+      ...product,
+      avg_unit_price: product.total_revenue / product.total_quantity,
+      percentage_of_total: (product.total_revenue / totalRevenue) * 100,
+    }));
+
+    // Sort products by revenue (highest first)
+    products.sort((a, b) => b.total_revenue - a.total_revenue);
+
+    const dateFrom = filterConfig.dateFrom || "Beginning";
+    const dateTo =
+      filterConfig.dateTo || new Date().toISOString().split("T")[0];
+
+    return {
+      total_sales: processedSales.length,
+      total_revenue: totalRevenue,
+      avg_order_value:
+        processedSales.length > 0 ? totalRevenue / processedSales.length : 0,
+      total_quantity: totalQuantity,
+      date_range: `${dateFrom} to ${dateTo}`,
+      products,
+    };
+  };
+
+  const exportToExcelOrCSV = (format: "excel" | "csv") => {
     const headers = [
       "ID",
       "Product Name",
@@ -451,27 +532,296 @@ export default function SalesPage() {
       "Tax %",
       "Created At",
     ];
+
     const csvContent = [
       headers.join(","),
       ...processedSales.map((sale) =>
         [
           sale.id,
-          `"${sale.product_name}"`,
+          `"${sale.product_name.replace(/"/g, '""')}"`,
           sale.unit_price.toFixed(2),
           sale.quantity,
           sale.total_price.toFixed(2),
-          sale.tax_percent?.toFixed(1) || "0",
+          sale.tax_percent?.toFixed(2) || "0",
           new Date(sale.createdAt).toLocaleDateString(),
         ].join(","),
       ),
     ].join("\n");
 
-    const blob = new Blob([csvContent], { type: "text/csv" });
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
+
+    if (format === "excel") {
+      // For Excel, we can use CSV with .xlsx extension
+      a.download = `sales-report-${new Date().toISOString().split("T")[0]}.xlsx`;
+    } else {
+      a.download = `sales-report-${new Date().toISOString().split("T")[0]}.csv`;
+    }
+
     a.href = url;
-    a.download = `sales-${new Date().toISOString().split("T")[0]}.csv`;
+    document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  };
+
+  // Update the exportToPDF function with pink color scheme and custom cell widths
+
+  const exportToPDF = async () => {
+    setIsExporting(true);
+    try {
+      // Calculate analytics
+      const analytics = calculateAnalytics();
+
+      // Create PDF document
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const margin = 15;
+
+      // Convert hex color to RGB for jsPDF
+      const pinkColor = [255, 121, 198]; // #ff79c6
+
+      // Add title and date range
+      doc.setFontSize(24);
+      doc.setTextColor(pinkColor[0], pinkColor[1], pinkColor[2]);
+      doc.text("Sales Analytics Report", pageWidth / 2, 25, {
+        align: "center",
+      });
+
+      doc.setFontSize(12);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Date Range: ${analytics.date_range}`, margin, 40);
+      doc.text(`Generated: ${new Date().toLocaleDateString()}`, margin, 47);
+      doc.text(
+        `Total Records: ${analytics.total_sales}`,
+        pageWidth - margin,
+        40,
+        { align: "right" },
+      );
+
+      // Page 1: Overview Section
+      let currentY = 60;
+
+      // Overview title
+      doc.setFontSize(18);
+      doc.setTextColor(pinkColor[0], pinkColor[1], pinkColor[2]);
+      doc.text("1. Executive Summary", margin, currentY);
+      currentY += 10;
+
+      // Key metrics in a nice box - REMOVED EMOJIS
+      doc.setFillColor(255, 245, 250); // Light pink background
+      doc.rect(margin, currentY, pageWidth - margin * 2, 55, "F");
+
+      doc.setFontSize(11);
+      doc.setTextColor(75, 85, 99); // Gray-700
+      doc.text("Key Performance Indicators", margin + 10, currentY + 15);
+
+      // Draw metrics in a grid - USING TEXT INSTEAD OF EMOJIS
+      const metrics = [
+        { label: "Total Sales", value: analytics.total_sales.toLocaleString() },
+        {
+          label: "Total Revenue",
+          value: `$${analytics.total_revenue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+        },
+        {
+          label: "Avg Order Value",
+          value: `$${analytics.avg_order_value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+        },
+        {
+          label: "Total Quantity",
+          value: analytics.total_quantity.toLocaleString(),
+        },
+      ];
+
+      const boxWidth = (pageWidth - margin * 2 - 30) / 2;
+      metrics.forEach((metric, index) => {
+        const row = Math.floor(index / 2);
+        const col = index % 2;
+        const x = margin + 15 + col * (boxWidth + 10);
+        const y = currentY + 30 + row * 20;
+
+        // Draw a pink circle as bullet point instead of emoji
+        doc.setFillColor(pinkColor[0], pinkColor[1], pinkColor[2]);
+        doc.circle(x + 3, y - 1, 2, "F");
+
+        doc.setFontSize(10);
+        doc.setTextColor(75, 85, 99);
+        doc.text(metric.label, x + 10, y - 3);
+
+        doc.setFontSize(12);
+        doc.setFont("bold");
+        doc.setTextColor(pinkColor[0], pinkColor[1], pinkColor[2]);
+        doc.text(metric.value, x + 10, y + 5);
+        doc.setFont("normal");
+      });
+
+      currentY += 70;
+
+      // Top Products Section
+      doc.setFontSize(18);
+      doc.setTextColor(pinkColor[0], pinkColor[1], pinkColor[2]);
+      doc.text("2. Top Products Performance", margin, currentY);
+      currentY += 10;
+
+      // Check if we need a new page
+      if (currentY > 250) {
+        doc.addPage();
+        currentY = 20;
+      }
+
+      // Product analytics table with custom column widths
+      const topProducts = analytics.products.slice(0, 10); // Top 10 products
+      const productData = topProducts.map((product) => [
+        product.product_name,
+        product.total_quantity.toLocaleString(),
+        `$${product.total_revenue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+        `$${product.avg_unit_price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+        `${product.percentage_of_total.toFixed(1)}%`,
+      ]);
+
+      autoTable(doc, {
+        startY: currentY,
+        head: [["Product", "Quantity", "Revenue", "Avg Price", "% of Total"]],
+        body: productData,
+        theme: "striped",
+        headStyles: {
+          fillColor: "#ff79c6",
+          textColor: [255, 255, 255],
+          fontSize: 11,
+          fontStyle: "bold",
+        },
+        bodyStyles: { fontSize: 10 },
+        margin: { left: margin, right: margin },
+        // Custom column widths (in mm)
+        columnStyles: {
+          0: { cellWidth: 60 }, // Product name - wider
+          1: { cellWidth: 25 }, // Quantity
+          2: { cellWidth: 35 }, // Revenue
+          3: { cellWidth: 30 }, // Avg Price
+          4: { cellWidth: 30 }, // % of Total
+        },
+      });
+
+      currentY = (doc as any).lastAutoTable.finalY + 15;
+
+      // Add product distribution note
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text(
+        `Showing top 10 of ${analytics.products.length} products`,
+        margin,
+        currentY,
+      );
+
+      // Add a new page for detailed sales data
+      doc.addPage();
+      currentY = 20;
+
+      // Detailed Sales Section
+      doc.setFontSize(24);
+      doc.setTextColor(pinkColor[0], pinkColor[1], pinkColor[2]);
+      doc.text("Detailed Sales Records", pageWidth / 2, 30, {
+        align: "center",
+      });
+
+      doc.setFontSize(12);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Report Period: ${analytics.date_range}`, margin, 45);
+      doc.text(`Page 3 of 3`, pageWidth - margin, 45, { align: "right" });
+
+      currentY = 55;
+
+      // Prepare table data
+      const tableData = processedSales.map((sale, index) => [
+        index,
+        sale.id.toString(),
+        sale.product_name,
+        `$${sale.unit_price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+        sale.quantity.toLocaleString(),
+        `$${sale.total_price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+        `${(sale.tax_percent || 0).toFixed(2)}%`,
+        new Date(sale.createdAt).toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+        }),
+      ]);
+
+      // Create detailed table with custom column widths
+      autoTable(doc, {
+        startY: currentY,
+        head: [
+          [
+            "Sr#",
+            "ID",
+            "Product Name",
+            "Unit Price",
+            "Quantity",
+            "Total Price",
+            "Tax %",
+            "Date",
+          ],
+        ],
+        body: tableData,
+        theme: "grid",
+        headStyles: {
+          fillColor: "#ff79c6",
+          textColor: [255, 255, 255],
+          fontSize: 10,
+          fontStyle: "bold",
+        },
+        bodyStyles: { fontSize: 9 },
+        margin: { left: margin, right: margin },
+        styles: {
+          overflow: "linebreak",
+          cellWidth: "wrap",
+          cellPadding: 1,
+        },
+        // Custom column widths (in mm)
+        columnStyles: {
+          0: { cellWidth: 15 }, // ID - narrower
+          1: { cellWidth: 15 }, // ID - narrower
+          2: { cellWidth: 45 }, // Product Name - wider
+          3: { cellWidth: 20 }, // Unit Price
+          4: { cellWidth: 15 }, // Quantity
+          5: { cellWidth: 25 }, // Total Price
+          6: { cellWidth: 15 }, // Tax %
+          7: { cellWidth: 30 }, // Date
+        },
+        didDrawPage: function (data) {
+          // Footer
+          doc.setFontSize(10);
+          doc.setTextColor(128, 128, 128);
+          doc.text(
+            `Sales Analytics Report - Page ${data.pageNumber} `,
+            data.settings.margin.left,
+            doc.internal.pageSize.height - 10,
+          );
+        },
+      });
+
+      // Save the PDF
+      doc.save(
+        `sales-analytics-report-${new Date().toISOString().split("T")[0]}.pdf`,
+      );
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      alert("Failed to generate PDF. Please try again.");
+    } finally {
+      setIsExporting(false);
+      setShowExportDropdown(false);
+    }
+  };
+
+  const handleExport = (format: ExportFormat) => {
+    setShowExportDropdown(false);
+
+    if (format === "excel" || format === "csv") {
+      exportToExcelOrCSV(format);
+    } else if (format === "pdf") {
+      exportToPDF();
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -484,8 +834,11 @@ export default function SalesPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 p-8 flex items-center justify-center">
-        <div className="text-gray-700">Loading sales data...</div>
+      <div className="min-h-screen w-full bg-background p-4 md:p-6 flex items-center justify-center">
+        <div className="text-center">
+          <RefreshCw className="w-12 h-12 text-primary animate-spin mx-auto mb-4" />
+          <p className="text-foreground/70">Loading analytics data...</p>
+        </div>
       </div>
     );
   }
@@ -534,7 +887,11 @@ export default function SalesPage() {
           <div className="flex items-center gap-3">
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+              className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${
+                showFilters
+                  ? "bg-green-700 text-white"
+                  : "bg-green-600 text-white hover:bg-green-700"
+              }`}
             >
               <Filter className="w-4 h-4" />
               Filters
@@ -575,13 +932,66 @@ export default function SalesPage() {
               )}
             </div>
 
-            <button
-              onClick={handleExport}
-              className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
-            >
-              <Download className="w-4 h-4" />
-              Export
-            </button>
+            <div className="relative">
+              <button
+                onClick={() => setShowExportDropdown(!showExportDropdown)}
+                className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors relative"
+              >
+                <Download className="w-4 h-4" />
+                Export
+                {isExporting && (
+                  <RefreshCw className="w-3 h-3 ml-1 animate-spin" />
+                )}
+              </button>
+
+              {showExportDropdown && (
+                <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                  <div className="p-2 border-b border-gray-200">
+                    <p className="text-xs text-gray-500 px-2">Export Format</p>
+                  </div>
+                  <button
+                    onClick={() => handleExport("excel")}
+                    className="w-full px-4 py-3 text-left text-gray-700 hover:bg-gray-50 flex items-center gap-3"
+                    disabled={isExporting}
+                  >
+                    <FileSpreadsheet className="w-4 h-4 text-green-600" />
+                    <div className="flex-1">
+                      <p className="font-medium">Export as Excel</p>
+                      <p className="text-xs text-gray-500">(.xlsx format)</p>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => handleExport("csv")}
+                    className="w-full px-4 py-3 text-left text-gray-700 hover:bg-gray-50 flex items-center gap-3 border-t border-gray-200"
+                    disabled={isExporting}
+                  >
+                    <FileDown className="w-4 h-4 text-blue-600" />
+                    <div className="flex-1">
+                      <p className="font-medium">Export as CSV</p>
+                      <p className="text-xs text-gray-500">(.csv format)</p>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => handleExport("pdf")}
+                    className="w-full px-4 py-3 text-left text-gray-700 hover:bg-gray-50 flex items-center gap-3 border-t border-gray-200"
+                    disabled={isExporting}
+                  >
+                    <FileText className="w-4 h-4 text-red-600" />
+                    <div className="flex-1">
+                      <p className="font-medium">Export as PDF Report</p>
+                      <p className="text-xs text-gray-500">
+                        With analytics & charts
+                      </p>
+                    </div>
+                  </button>
+                  <div className="p-2 border-t border-gray-200 bg-gray-50">
+                    <p className="text-xs text-gray-500 px-2">
+                      Exporting {processedSales.length} filtered records
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -792,7 +1202,7 @@ export default function SalesPage() {
                   }`}
                 >
                   <td className="py-2 px-2 text-sm text-gray-600 border-r border-gray-200">
-                    {index}
+                    {startIndex + index + 1}
                   </td>
                   <td className="py-2 px-3 text-sm text-gray-600 border-r border-gray-200">
                     {sale.id}
@@ -970,7 +1380,7 @@ export default function SalesPage() {
                       />
                     ) : (
                       <span className="text-gray-800">
-                        {(sale.tax_percent || 0).toFixed(1)}%
+                        {(sale.tax_percent || 0).toFixed(2)}%
                       </span>
                     )}
                   </td>
@@ -1242,7 +1652,7 @@ export default function SalesPage() {
         <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
           <div className="text-sm text-gray-600">Total Sales</div>
           <div className="text-2xl font-bold text-gray-800">
-            {processedSales.length}
+            {processedSales.length.toLocaleString()}
           </div>
         </div>
         <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
@@ -1251,7 +1661,10 @@ export default function SalesPage() {
             $
             {processedSales
               .reduce((sum, sale) => sum + sale.total_price, 0)
-              .toFixed(2)}
+              .toLocaleString("en-US", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
           </div>
         </div>
         <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
@@ -1264,14 +1677,19 @@ export default function SalesPage() {
                     (sum, sale) => sum + sale.total_price,
                     0,
                   ) / processedSales.length
-                ).toFixed(2)
+                ).toLocaleString("en-US", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })
               : "0.00"}
           </div>
         </div>
         <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
           <div className="text-sm text-gray-600">Total Quantity</div>
           <div className="text-2xl font-bold text-gray-800">
-            {processedSales.reduce((sum, sale) => sum + sale.quantity, 0)}
+            {processedSales
+              .reduce((sum, sale) => sum + sale.quantity, 0)
+              .toLocaleString()}
           </div>
         </div>
       </div>

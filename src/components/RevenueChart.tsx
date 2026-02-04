@@ -28,6 +28,7 @@ export function RevenueChart({
     "daily",
   );
   const [currentRange, setCurrentRange] = useState(selectedRange);
+  console.log("Monthly data:", monthlyData);
 
   // Update when selectedRange prop changes
   useEffect(() => {
@@ -39,64 +40,71 @@ export function RevenueChart({
     if (currentRange === "all") return dailyData;
 
     const now = new Date();
-    let cutoffDate = new Date();
+    let daysToSubtract = 0;
 
     switch (currentRange) {
       case "7d":
-        cutoffDate.setDate(now.getDate() - 7);
+        daysToSubtract = 7;
         break;
       case "30d":
-        cutoffDate.setDate(now.getDate() - 30);
+        daysToSubtract = 30;
         break;
       case "90d":
-        cutoffDate.setDate(now.getDate() - 90);
+        daysToSubtract = 90;
         break;
       case "1y":
-        cutoffDate.setFullYear(now.getFullYear() - 1);
+        daysToSubtract = 365;
         break;
     }
 
+    const cutoffDate = new Date(now);
+    cutoffDate.setDate(now.getDate() - daysToSubtract);
+
+    // Just get the date part for comparison (ignore time)
+    const cutoffDateString = cutoffDate.toISOString().split("T")[0];
+
     return dailyData
       .filter((item) => {
-        const itemDate = new Date(item.date);
-        return itemDate >= cutoffDate && itemDate <= now;
+        // Compare date strings directly for simplicity
+        const itemDate = new Date(item.date).toISOString().split("T")[0];
+        const cutoff = new Date(cutoffDateString).toISOString().split("T")[0];
+        const current = new Date().toISOString().split("T")[0];
+
+        // Include items from cutoff date up to today
+        return itemDate >= cutoff && itemDate <= current;
       })
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }, [dailyData, currentRange]);
 
-  // Filter monthly data based on selected range
+  // Filter monthly data based on selected range - SIMPLIFIED
   const filteredMonthlyData = useMemo(() => {
+    console.log(`Range ${currentRange}`);
     if (currentRange === "all") return monthlyData;
 
-    const now = new Date();
-    let cutoffDate = new Date();
+    let itemsToShow = 0;
 
     switch (currentRange) {
       case "7d":
       case "30d":
-        // For short ranges, show last 6 months
-        cutoffDate.setMonth(now.getMonth() - 6);
+        itemsToShow = 6;
         break;
       case "90d":
-        // For 90 days, show last 12 months
-        cutoffDate.setMonth(now.getMonth() - 12);
+        itemsToShow = 9;
         break;
       case "1y":
-        // For 1 year, show last 24 months
-        cutoffDate.setMonth(now.getMonth() - 24);
+        itemsToShow = 12;
         break;
     }
 
-    return monthlyData
-      .filter((item) => {
-        const itemDate = new Date(item.month);
-        return itemDate >= cutoffDate && itemDate <= now;
-      })
-      .sort(
-        (a, b) => new Date(a.month).getTime() - new Date(b.month).getTime(),
-      );
+    // Just take the last N items from the sorted data
+    const sorted = [...monthlyData].sort(
+      (a, b) => new Date(a.month).getTime() - new Date(b.month).getTime(),
+    );
+
+    return sorted.slice(-itemsToShow);
   }, [monthlyData, currentRange]);
 
+  // Rest of your component remains the same...
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     if (selectedPeriod === "daily") {
@@ -132,6 +140,11 @@ export function RevenueChart({
   const growth = calculateGrowth();
   const currentData = getCurrentData();
   const totalRevenue = currentData.reduce((sum, item) => sum + item.revenue, 0);
+
+  // Add debug logging
+  console.log(`Filtered monthly data count: ${filteredMonthlyData.length}`);
+  console.log(`Filtered daily data count: ${filteredDailyData.length}`);
+  console.log(`Selected period: ${selectedPeriod}, Range: ${currentRange}`);
 
   return (
     <div className="bg-background-sec rounded-xl p-6 shadow-sm border border-primary-sec/20">

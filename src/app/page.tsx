@@ -209,6 +209,7 @@ export default function Home() {
           dailyData={revenueByDay}
           monthlyData={revenueByMonth}
           title="Revenue Trends"
+          selectedRange={dateRange}
         />
       </div>
 
@@ -272,7 +273,7 @@ export default function Home() {
               <h4 className="text-foreground/70 text-sm">Avg Daily Orders</h4>
               <p className="text-2xl font-bold text-foreground">
                 {revenueByDay.length > 0
-                  ? (kpis.totalOrders / revenueByDay.length).toFixed(1)
+                  ? (kpis.totalOrders / revenueByDay.length).toFixed(2)
                   : "0"}
               </p>
             </div>
