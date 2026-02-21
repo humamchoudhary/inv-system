@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "..";
 import { business, salesSheet, users, sales } from "../schema";
+import { getUser } from "./user";
 
 export async function createBusiness(
   name: string,
@@ -27,13 +28,18 @@ export async function createBusiness(
     .where(eq(users.id, user_id));
 }
 
-export async function getUserActiveBusiness(
-  user_id: string,
-  business_id: string,
-) {
-  return await db.query.business.findFirst({
-    where: and(eq(business.id, business_id), eq(business.user_id, user_id)),
-  });
+export async function getUserActiveBusiness(user_id: string) {
+  const user = await getUser(user_id);
+  if (user!.last_business) {
+    return await db.query.business.findFirst({
+      where: and(
+        eq(business.id, user!.last_business),
+        eq(business.user_id, user_id),
+      ),
+    });
+  } else {
+    return null;
+  }
 }
 
 export async function getUserBusinesses(user_id: string) {

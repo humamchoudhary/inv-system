@@ -19,10 +19,7 @@ export default async function SalesRoute() {
   if (!session) redirect("/signin");
 
   const user = await getUser(session.user.id);
-  const business = await getUserActiveBusiness(
-    session.user.id,
-    user?.last_business!,
-  );
+  const business = await getUserActiveBusiness(session.user.id);
 
   if (!business) redirect("/welcome");
 

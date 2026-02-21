@@ -922,10 +922,8 @@ export default function SalesPage({
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            product_name: field === "name" ? value : sale.name,
-            unit_price: field === "price" ? parseFloat(value) : sale.price,
-            quantity: 1,
-            total_price: field === "price" ? parseFloat(value) : sale.price,
+            name: field === "name" ? value : sale.name,
+            price: field === "price" ? parseFloat(value) : sale.price,
           }),
         });
       } catch {
@@ -992,7 +990,7 @@ export default function SalesPage({
 
       {/* Summary stats */}
       <div
-        className="relative z-10 mx-5 mt-4 grid grid-cols-3 rounded-2xl border border-[#f0f0f0] bg-white overflow-hidden shadow-sm shadow-black/[0.03]"
+        className="relative z-10 mx-5 mt-4 grid grid-cols-2 rounded-2xl border border-[#f0f0f0] bg-white overflow-hidden shadow-sm shadow-black/[0.03]"
         style={{ animation: "fadeUp 0.4s 0.05s ease both" }}
       >
         {[
@@ -1001,7 +999,7 @@ export default function SalesPage({
             value: formatCurrency(stats.revenue, currencyCode),
           },
           { label: "Items", value: stats.items },
-          { label: "Entries", value: stats.entries },
+          // { label: "Entries", value: stats.entries },
         ].map((s, i) => (
           <div
             key={s.label}
