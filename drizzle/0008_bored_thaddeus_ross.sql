@@ -1,0 +1,1 @@
+ALTER TABLE "sales-sheet" ALTER COLUMN "id" SET DATA TYPE text;

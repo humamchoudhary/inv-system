@@ -10,6 +10,9 @@
     "format": "biome format --write"
   },
   "dependencies": {
+    "@auth/core": "^0.41.1",
+    "@auth/drizzle-adapter": "^1.11.1",
+    "@google/genai": "^1.42.0",
     "bcrypt": "^6.0.0",
     "dotenv": "^17.2.3",
     "drizzle-orm": "^0.45.1",
@@ -18,11 +21,12 @@
     "jspdf-autotable": "^5.0.7",
     "lucide-react": "^0.563.0",
     "next": "16.1.6",
-    "next-auth": "^4.24.13",
+    "next-auth": "^5.0.0-beta.30",
     "postgres": "^3.4.8",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "recharts": "^3.7.0"
+    "recharts": "^3.7.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@biomejs/biome": "2.2.0",

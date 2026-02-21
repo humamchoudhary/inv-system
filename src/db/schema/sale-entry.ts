@@ -7,15 +7,25 @@ import {
   numeric,
 } from "drizzle-orm/pg-core";
 import { InferInsertModel, InferSelectModel } from "drizzle-orm";
+import salesSheet from "./sale-sheet";
+import transcription from "./transcription";
 
 const sales = pgTable("sales", {
-  id: serial("id").primaryKey(),
-  product_name: text("product_name").notNull(),
-  unit_price: numeric("unit_price").notNull(),
-  total_price: numeric("total_price").notNull(),
-  quantity: integer("quantity").notNull(),
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  name: text("name").notNull(),
+  price: numeric("price").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
-  tax_percent: numeric("tax_percent"),
+  transcription_id: text("transcription_id")
+    .notNull()
+    .references(() => transcription.id),
+  sheet_id: text("sheet_id")
+    .notNull()
+    .references(() => salesSheet.id, {
+      onDelete: "cascade",
+      onUpdate: "cascade",
+    }),
 });
 
 // Infer the type from the sales table
