@@ -1,5 +1,4 @@
 import { auth } from "@/auth";
-import Navbar from "@/components/Navbar";
 import { redirect } from "next/navigation";
 
 export default async function DashboardLayout({
@@ -15,10 +14,5 @@ export default async function DashboardLayout({
     redirect("/welcome");
   }
 
-  return (
-    <>
-      <Navbar />
-      {children}
-    </>
-  );
+  return <>{children}</>;
 }

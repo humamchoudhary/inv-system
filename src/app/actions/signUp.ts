@@ -15,7 +15,7 @@ export async function signUp(
     await signIn("credentials", {
       email,
       password,
-      redirectTo: "/dashboard",
+      redirectTo: "/",
     });
     return { message: "", error: false };
   } catch (e) {

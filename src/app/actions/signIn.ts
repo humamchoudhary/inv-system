@@ -9,7 +9,7 @@ export async function signInAction(
 ) {
   try {
     await signIn("credentials", {
-      redirectTo: "/dashboard",
+      redirectTo: "/",
       email: formData.get("email"),
       password: formData.get("password"),
     });

@@ -12,6 +12,7 @@ import {
   ShoppingBag,
 } from "lucide-react";
 import { type Business } from "@/db/schema/business";
+import swtichBusinessAction from "@/app/actions/switchBusiness";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 // Business type comes directly from the schema — no redefinition needed.
@@ -481,9 +482,11 @@ export default function HomePage({
           businesses={businesses}
           activeBusinessId={resolvedActiveId}
           onClose={() => setSwitcherOpen(false)}
-          onSwitch={(id) => {
+          onSwitch={async (id) => {
             // TODO: persist new active business via server action, then reload
-            router.push(`/home?business=${id}`);
+            if (await swtichBusinessAction(id)) {
+              router.push(`/`);
+            }
             setSwitcherOpen(false);
           }}
         />

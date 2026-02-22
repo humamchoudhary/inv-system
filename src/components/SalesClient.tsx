@@ -1,0 +1,1190 @@
+"use client";
+
+// src/app/(protected)/sales/SalesClient.tsx
+// All filtering is server-side. This client component only handles:
+// - URL navigation (filter changes → router.push → server re-fetches)
+// - Optimistic inline edits (name/price via API)
+// - UI state: expanded cards, view mode toggle
+
+import {
+  useState,
+  useMemo,
+  useCallback,
+  useTransition,
+  useEffect,
+} from "react";
+import { useRouter } from "next/navigation";
+import {
+  ChevronLeft,
+  ChevronDown,
+  ChevronUp,
+  Search,
+  FileText,
+  Mic,
+  Trash2,
+  Check,
+  X,
+  Package,
+  BarChart2,
+  Clock,
+  SlidersHorizontal,
+  Pencil,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  CalendarDays,
+  Tag,
+  DollarSign,
+  Loader2,
+} from "lucide-react";
+
+// ─────────────────────────────────────────────
+// Types
+// ─────────────────────────────────────────────
+
+export type SheetSummary = {
+  id: string;
+  name: string;
+  createdAt: Date | null;
+};
+
+export type SaleEntry = {
+  id: string;
+  name: string;
+  price: number;
+  createdAt: Date | null;
+  sheetId: string;
+  transcriptionId?: string;
+  transcriptionText?: string;
+};
+
+type TranscriptionGroup = {
+  key: string;
+  transcriptionText: string;
+  createdAt: Date | null;
+  sheetId: string;
+  items: SaleEntry[];
+};
+
+type ItemSummary = {
+  name: string;
+  qtySold: number;
+  totalRevenue: number;
+  avgPrice: number;
+  pct: number;
+};
+
+type SortField = "name" | "price" | "qty";
+type SortDir = "asc" | "desc";
+
+interface SalesClientProps {
+  sheets: SheetSummary[];
+  sales: SaleEntry[];
+  currencyCode: string;
+  businessName: string;
+  // Server-resolved filter state
+  activeSheet: string;
+  dateFilter: string;
+  viewMode: string;
+  searchQuery: string;
+  minPrice: string;
+  maxPrice: string;
+  dateFrom: string;
+  dateTo: string;
+  totalRevenue: number;
+  totalItems: number;
+}
+
+// ─────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────
+
+function fmt(amount: number, code = "USD") {
+  try {
+    return new Intl.NumberFormat("en", {
+      style: "currency",
+      currency: code,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  } catch {
+    return `${code} ${amount.toLocaleString()}`;
+  }
+}
+
+function formatTime(date: Date | null) {
+  if (!date) return "";
+  return new Date(date).toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function formatDate(date: Date | null) {
+  if (!date) return "";
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+  const d = new Date(date);
+  if (d.toDateString() === today.toDateString()) return "Today";
+  if (d.toDateString() === yesterday.toDateString()) return "Yesterday";
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function groupIntoSessions(sales: SaleEntry[]): TranscriptionGroup[] {
+  const grouped = new Map<string, TranscriptionGroup>();
+  for (const sale of sales) {
+    // Group by transcriptionId if available, else by minute
+    const key = sale.transcriptionId
+      ? sale.transcriptionId
+      : sale.createdAt
+        ? `${sale.sheetId}__${Math.floor(new Date(sale.createdAt).getTime() / 60000)}`
+        : `${sale.sheetId}__unknown`;
+
+    if (!grouped.has(key)) {
+      grouped.set(key, {
+        key,
+        transcriptionText: sale.transcriptionText ?? "",
+        createdAt: sale.createdAt,
+        sheetId: sale.sheetId,
+        items: [],
+      });
+    }
+    const g = grouped.get(key)!;
+    g.items.push(sale);
+    if (sale.transcriptionText && !g.transcriptionText)
+      g.transcriptionText = sale.transcriptionText;
+  }
+  return Array.from(grouped.values()).sort((a, b) => {
+    if (!a.createdAt || !b.createdAt) return 0;
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
+}
+
+function buildItemSummary(
+  sales: SaleEntry[],
+  totalRevenue: number,
+): ItemSummary[] {
+  const map = new Map<string, { qtySold: number; totalRevenue: number }>();
+  for (const sale of sales) {
+    const key = sale.name.toLowerCase().trim();
+    if (!map.has(key)) map.set(key, { qtySold: 0, totalRevenue: 0 });
+    const item = map.get(key)!;
+    item.qtySold += 1;
+    item.totalRevenue += sale.price;
+  }
+  return Array.from(map.entries()).map(([key, data]) => ({
+    name: sales.find((s) => s.name.toLowerCase().trim() === key)?.name ?? key,
+    qtySold: data.qtySold,
+    totalRevenue: data.totalRevenue,
+    avgPrice: data.totalRevenue / data.qtySold,
+    pct: totalRevenue > 0 ? (data.totalRevenue / totalRevenue) * 100 : 0,
+  }));
+}
+
+const DATE_OPTIONS = [
+  { label: "Today", value: "today" },
+  { label: "Week", value: "week" },
+  { label: "30 Days", value: "month" },
+  { label: "All Time", value: "all" },
+];
+
+// ─────────────────────────────────────────────
+// URL builder
+// ─────────────────────────────────────────────
+
+function buildUrl(
+  base: Record<string, string>,
+  overrides: Record<string, string>,
+) {
+  const merged = { ...base, ...overrides };
+  const params = new URLSearchParams();
+  for (const [k, v] of Object.entries(merged)) {
+    if (v && v !== "") params.set(k, v);
+  }
+  return `/sales?${params.toString()}`;
+}
+
+// ─────────────────────────────────────────────
+// Sub-components
+// ─────────────────────────────────────────────
+
+function Ambient() {
+  return (
+    <div className="fixed inset-0 pointer-events-none select-none z-0">
+      <div className="absolute top-[-10%] right-[-15%] w-[420px] h-[420px] rounded-full bg-[#ffb3d9] opacity-[0.12] blur-[120px]" />
+      <div className="absolute bottom-[-5%] left-[-10%] w-[320px] h-[320px] rounded-full bg-[#ff79c6] opacity-[0.07] blur-[100px]" />
+    </div>
+  );
+}
+
+function EmptyState({ message, sub }: { message: string; sub?: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-16 gap-3">
+      <div className="w-12 h-12 rounded-2xl bg-[#f0f0f0] flex items-center justify-center">
+        <Package className="w-5 h-5 text-[#171717]/30" />
+      </div>
+      <p className="text-sm font-medium text-[#171717]/50">{message}</p>
+      {sub && <p className="text-xs text-[#171717]/30">{sub}</p>}
+    </div>
+  );
+}
+
+// InlineEdit for optimistic updates
+function InlineEdit({
+  value,
+  type = "text",
+  onSave,
+  className = "",
+  placeholder = "",
+}: {
+  value: string;
+  type?: "text" | "number";
+  onSave: (v: string) => void;
+  className?: string;
+  placeholder?: string;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+
+  const commit = () => {
+    const trimmed = draft.trim();
+    if (trimmed && trimmed !== value) onSave(trimmed);
+    else setDraft(value);
+    setEditing(false);
+  };
+
+  const cancel = () => {
+    setDraft(value);
+    setEditing(false);
+  };
+
+  if (!editing) {
+    return (
+      <button
+        onClick={() => {
+          setDraft(value);
+          setEditing(true);
+        }}
+        className={`group/ie flex items-center gap-1 text-left min-w-0 hover:text-[#ff79c6] transition-colors duration-100 ${className}`}
+      >
+        <span className="truncate">
+          {value || <span className="italic opacity-40">{placeholder}</span>}
+        </span>
+        <Pencil className="w-2.5 h-2.5 shrink-0 opacity-0 group-hover/ie:opacity-50 transition-opacity ml-0.5" />
+      </button>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-1 min-w-0 w-full">
+      <input
+        autoFocus
+        type={type}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") commit();
+          if (e.key === "Escape") cancel();
+        }}
+        className="flex-1 min-w-0 px-2 py-1 text-sm rounded-lg border border-[#ff79c6] bg-white text-[#171717] outline-none ring-2 ring-[#ff79c6]/20"
+        placeholder={placeholder}
+      />
+      <button
+        onMouseDown={(e) => {
+          e.preventDefault();
+          commit();
+        }}
+        className="w-6 h-6 rounded-md bg-[#ff79c6] flex items-center justify-center shrink-0"
+      >
+        <Check className="w-3 h-3 text-white" />
+      </button>
+      <button
+        onMouseDown={(e) => {
+          e.preventDefault();
+          cancel();
+        }}
+        className="w-6 h-6 rounded-md bg-[#f0f0f0] flex items-center justify-center shrink-0"
+      >
+        <X className="w-3 h-3 text-[#171717]/50" />
+      </button>
+    </div>
+  );
+}
+
+// Sale item row in expanded session
+function SaleItemRow({
+  item,
+  onUpdate,
+  onDelete,
+}: {
+  item: SaleEntry;
+  onUpdate: (id: string, field: "name" | "price", value: string) => void;
+  onDelete: (id: string) => void;
+}) {
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  return (
+    <div className="grid grid-cols-[1fr_100px_36px] items-center gap-2 px-5 py-3 border-b border-[#f0f0f0] last:border-0 group/row hover:bg-[#fdfcff] transition-colors duration-100">
+      <InlineEdit
+        value={item.name}
+        type="text"
+        placeholder="Item name"
+        onSave={(v) => onUpdate(item.id, "name", v)}
+        className="text-sm text-[#171717]"
+      />
+      <InlineEdit
+        value={String(item.price)}
+        type="number"
+        placeholder="0"
+        onSave={(v) => onUpdate(item.id, "price", v)}
+        className="text-sm font-semibold text-[#171717] tabular-nums justify-end"
+      />
+      <div className="flex items-center justify-end">
+        {confirmDelete ? (
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => {
+                onDelete(item.id);
+                setConfirmDelete(false);
+              }}
+              className="w-6 h-6 rounded-lg bg-red-500 flex items-center justify-center"
+            >
+              <Check className="w-3 h-3 text-white" />
+            </button>
+            <button
+              onClick={() => setConfirmDelete(false)}
+              className="w-6 h-6 rounded-lg bg-[#f0f0f0] flex items-center justify-center"
+            >
+              <X className="w-3 h-3 text-[#171717]/50" />
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setConfirmDelete(true)}
+            className="w-7 h-7 rounded-lg flex items-center justify-center text-[#171717]/20 hover:text-red-400 hover:bg-red-50 transition-colors opacity-0 group-hover/row:opacity-100"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Session card (expandable)
+function SaleSessionCard({
+  group,
+  sheetName,
+  currencyCode,
+  onUpdateItem,
+  onDeleteItem,
+}: {
+  group: TranscriptionGroup;
+  sheetName: string;
+  currencyCode: string;
+  onUpdateItem: (id: string, field: "name" | "price", value: string) => void;
+  onDeleteItem: (id: string) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const liveTotal = group.items.reduce((s, i) => s + i.price, 0);
+  const preview =
+    group.items
+      .map((i) => i.name)
+      .slice(0, 3)
+      .join(", ") +
+    (group.items.length > 3 ? ` +${group.items.length - 3}` : "");
+
+  return (
+    <div
+      className={`bg-white border rounded-2xl overflow-hidden transition-all duration-200 ${expanded ? "border-[#ffb3d9]/60 shadow-md shadow-[#ff79c6]/[0.08]" : "border-[#f0f0f0] hover:border-[#ffb3d9]/40"}`}
+    >
+      <button
+        onClick={() => setExpanded((v) => !v)}
+        className="w-full flex items-start gap-3 px-5 py-4 text-left"
+      >
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
+            <span className="text-[10px] font-medium text-[#171717]/30 uppercase tracking-widest">
+              {formatDate(group.createdAt)}
+            </span>
+            <span className="text-[#171717]/15">·</span>
+            <span className="text-[10px] text-[#171717]/30">
+              {formatTime(group.createdAt)}
+            </span>
+            <span className="ml-auto flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#f0f0f0]/60 border border-[#f0f0f0] shrink-0">
+              <FileText className="w-2.5 h-2.5 text-[#171717]/25" />
+              <span className="text-[9px] text-[#171717]/35 font-medium">
+                {sheetName}
+              </span>
+            </span>
+          </div>
+          <p className="text-sm text-[#171717] font-medium truncate">
+            {preview}
+          </p>
+          {group.transcriptionText && (
+            <p className="text-xs text-[#171717]/30 italic mt-0.5 truncate">
+              "{group.transcriptionText}"
+            </p>
+          )}
+        </div>
+        <div className="flex flex-col items-end gap-1 shrink-0 ml-3">
+          <p className="text-sm font-bold text-[#171717] tabular-nums">
+            {fmt(liveTotal, currencyCode)}
+          </p>
+          <div className="flex items-center gap-1 text-[#171717]/25">
+            <span className="text-[10px]">{group.items.length} items</span>
+            {expanded ? (
+              <ChevronUp className="w-3.5 h-3.5" />
+            ) : (
+              <ChevronDown className="w-3.5 h-3.5" />
+            )}
+          </div>
+        </div>
+      </button>
+
+      {expanded && (
+        <div className="border-t border-[#f0f0f0]">
+          <div className="grid grid-cols-[1fr_100px_36px] gap-2 px-5 py-2 bg-[#fafafa] border-b border-[#f0f0f0]">
+            <span className="text-[10px] font-semibold text-[#171717]/30 uppercase tracking-wider">
+              Item
+            </span>
+            <span className="text-[10px] font-semibold text-[#171717]/30 uppercase tracking-wider text-right">
+              Price
+            </span>
+            <span />
+          </div>
+          {group.items.map((item) => (
+            <SaleItemRow
+              key={item.id}
+              item={item}
+              onUpdate={onUpdateItem}
+              onDelete={onDeleteItem}
+            />
+          ))}
+          <div className="flex items-center justify-between px-5 py-3 bg-[#fafafa] border-t border-[#f0f0f0]">
+            <span className="text-xs font-semibold text-[#171717]/35 uppercase tracking-wider">
+              Total
+            </span>
+            <span className="text-sm font-bold text-[#ff79c6] tabular-nums">
+              {fmt(liveTotal, currencyCode)}
+            </span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Item summary row for "By Item" view
+function ItemRow({
+  item,
+  currencyCode,
+}: {
+  item: ItemSummary;
+  currencyCode: string;
+}) {
+  return (
+    <div className="flex items-center gap-4 px-5 py-4 border-b border-[#f0f0f0] last:border-0 hover:bg-[#fdfcff] transition-colors duration-100">
+      <div className="w-8 h-8 rounded-xl bg-[#ff79c6]/10 flex items-center justify-center shrink-0">
+        <span className="text-[10px] font-bold text-[#ff79c6]">
+          {item.name.slice(0, 2).toUpperCase()}
+        </span>
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-[#171717] truncate">
+          {item.name}
+        </p>
+        <div className="flex items-center gap-2 mt-1">
+          <div className="h-1 flex-1 rounded-full bg-[#f0f0f0] overflow-hidden">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-[#ff79c6] to-[#ffb3d9] transition-all duration-500"
+              style={{ width: `${item.pct}%` }}
+            />
+          </div>
+          <span className="text-[10px] text-[#171717]/30 tabular-nums w-7 text-right shrink-0">
+            {item.pct.toFixed(0)}%
+          </span>
+        </div>
+      </div>
+      <div className="flex flex-col items-end gap-0.5 shrink-0">
+        <p className="text-sm font-bold text-[#171717] tabular-nums">
+          {fmt(item.totalRevenue, currencyCode)}
+        </p>
+        <p className="text-[10px] text-[#171717]/40 text-right">
+          {item.qtySold} {item.qtySold === 1 ? "sale" : "sales"} · avg{" "}
+          {fmt(item.avgPrice, currencyCode)}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// Sort button for "By Item" header
+function SortBtn({
+  label,
+  field,
+  current,
+  dir,
+  onClick,
+}: {
+  label: string;
+  field: SortField;
+  current: SortField;
+  dir: SortDir;
+  onClick: () => void;
+}) {
+  const active = current === field;
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider transition-colors ${active ? "text-[#ff79c6]" : "text-[#171717]/30 hover:text-[#171717]/50"}`}
+    >
+      {label}
+      {active ? (
+        dir === "asc" ? (
+          <ArrowUp className="w-3 h-3" />
+        ) : (
+          <ArrowDown className="w-3 h-3" />
+        )
+      ) : (
+        <ArrowUpDown className="w-3 h-3 opacity-40" />
+      )}
+    </button>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Main Client Component
+// ─────────────────────────────────────────────
+
+export default function SalesClient({
+  sheets,
+  sales,
+  currencyCode,
+  businessName,
+  activeSheet,
+  dateFilter,
+  viewMode,
+  searchQuery,
+  minPrice,
+  maxPrice,
+  dateFrom,
+  dateTo,
+  totalRevenue,
+  totalItems,
+}: SalesClientProps) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+
+  // Local sort state (client-only — data already filtered server-side)
+  const [sortField, setSortField] = useState<SortField>("qty");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
+
+  // Optimistic local mutations
+  const [localSales, setLocalSales] = useState<SaleEntry[]>(sales);
+  useEffect(() => {
+    setLocalSales(sales);
+  }, [sales]);
+
+  // Advanced filter panel visibility
+  const [showFilters, setShowFilters] = useState(false);
+  // Draft filter inputs (committed on search button or enter)
+  const [draftQ, setDraftQ] = useState(searchQuery);
+  const [draftMin, setDraftMin] = useState(minPrice);
+  const [draftMax, setDraftMax] = useState(maxPrice);
+  const [draftDateFrom, setDraftDateFrom] = useState(dateFrom);
+  const [draftDateTo, setDraftDateTo] = useState(dateTo);
+
+  // Current filter state passed from server
+  const currentFilters = {
+    sheet: activeSheet,
+    date: dateFilter,
+    view: viewMode,
+    q: searchQuery,
+    minPrice,
+    maxPrice,
+    dateFrom,
+    dateTo,
+  };
+
+  const navigate = (overrides: Record<string, string>) => {
+    startTransition(() => {
+      router.push(buildUrl(currentFilters, overrides));
+    });
+  };
+
+  const applySearch = () => {
+    navigate({
+      q: draftQ,
+      minPrice: draftMin,
+      maxPrice: draftMax,
+      dateFrom: draftDateFrom,
+      dateTo: draftDateTo,
+    });
+  };
+
+  const clearFilters = () => {
+    setDraftQ("");
+    setDraftMin("");
+    setDraftMax("");
+    setDraftDateFrom("");
+    setDraftDateTo("");
+    navigate({ q: "", minPrice: "", maxPrice: "", dateFrom: "", dateTo: "" });
+  };
+
+  // ── Item sort (client-side on already-filtered data) ──
+  const itemSummaries = useMemo(() => {
+    const raw = buildItemSummary(localSales, totalRevenue);
+    return [...raw].sort((a, b) => {
+      if (sortField === "name")
+        return sortDir === "asc"
+          ? a.name.localeCompare(b.name)
+          : b.name.localeCompare(a.name);
+      if (sortField === "price")
+        return sortDir === "asc"
+          ? a.totalRevenue - b.totalRevenue
+          : b.totalRevenue - a.totalRevenue;
+      return sortDir === "asc" ? a.qtySold - b.qtySold : b.qtySold - a.qtySold;
+    });
+  }, [localSales, sortField, sortDir, totalRevenue]);
+
+  const toggleSort = (field: SortField) => {
+    if (sortField === field) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else {
+      setSortField(field);
+      setSortDir("desc");
+    }
+  };
+
+  // ── Session grouping ──
+  const sessions = useMemo(() => groupIntoSessions(localSales), [localSales]);
+  const sessionsByDate = useMemo(() => {
+    const groups: { label: string; sessions: typeof sessions }[] = [];
+    let currentLabel = "";
+    for (const s of sessions) {
+      const label = formatDate(s.createdAt);
+      if (label !== currentLabel) {
+        currentLabel = label;
+        groups.push({ label, sessions: [] });
+      }
+      groups[groups.length - 1].sessions.push(s);
+    }
+    return groups;
+  }, [sessions]);
+
+  const sheetMap = useMemo(
+    () => new Map(sheets.map((s) => [s.id, s.name])),
+    [sheets],
+  );
+
+  // ── Mutations ──
+  const handleUpdateItem = useCallback(
+    async (id: string, field: "name" | "price", value: string) => {
+      setLocalSales((prev) =>
+        prev.map((s) =>
+          s.id === id
+            ? {
+                ...s,
+                [field]: field === "price" ? parseFloat(value) || 0 : value,
+              }
+            : s,
+        ),
+      );
+      try {
+        const sale = localSales.find((s) => s.id === id);
+        if (!sale) return;
+        await fetch(`/api/sales/${id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: field === "name" ? value : sale.name,
+            price: field === "price" ? parseFloat(value) : sale.price,
+          }),
+        });
+      } catch {
+        /* silent */
+      }
+    },
+    [localSales],
+  );
+
+  const handleDeleteItem = useCallback(async (id: string) => {
+    setLocalSales((prev) => prev.filter((s) => s.id !== id));
+    try {
+      await fetch(`/api/sales/${id}`, { method: "DELETE" });
+    } catch {
+      /* silent */
+    }
+  }, []);
+
+  const activeFilterCount = [
+    searchQuery,
+    minPrice || maxPrice,
+    dateFrom || dateTo,
+  ].filter(Boolean).length;
+
+  // ─────────────────────────────────────────────
+  // Render
+  // ─────────────────────────────────────────────
+
+  return (
+    <main className="min-h-screen w-full bg-[#ffffff] flex flex-col font-[family-name:var(--font-geist-sans)] overflow-hidden">
+      <Ambient />
+
+      {/* ── Header ── */}
+      <header
+        className="relative z-10 flex items-center justify-between px-5 pt-10 pb-4"
+        style={{ animation: "fadeDown 0.4s ease both" }}
+      >
+        <div className="flex items-center gap-3">
+          <a
+            href="/"
+            className="flex items-center justify-center w-8 h-8 rounded-xl bg-[#f0f0f0] hover:bg-[#ffb3d9]/30 transition-colors duration-200"
+          >
+            <ChevronLeft className="w-4 h-4 text-[#171717]/60" />
+          </a>
+          <div>
+            <h1 className="text-[17px] font-semibold tracking-tight text-[#171717] leading-tight">
+              Sales & Inventory
+            </h1>
+            <p className="text-[11px] text-[#171717]/40">{businessName}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {isPending && (
+            <Loader2 className="w-4 h-4 text-[#ff79c6] animate-spin" />
+          )}
+          <a
+            href="/record"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#ff79c6] text-white text-xs font-semibold shadow-md shadow-[#ff79c6]/30 hover:bg-[#ff79c6]/90 active:scale-[0.97] transition-all duration-200"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+              <rect x="9" y="2" width="6" height="12" rx="3" fill="white" />
+              <path
+                d="M5 10a7 7 0 0014 0"
+                stroke="white"
+                strokeWidth="1.75"
+                strokeLinecap="round"
+              />
+              <line
+                x1="12"
+                y1="17"
+                x2="12"
+                y2="21"
+                stroke="white"
+                strokeWidth="1.75"
+                strokeLinecap="round"
+              />
+              <line
+                x1="9"
+                y1="21"
+                x2="15"
+                y2="21"
+                stroke="white"
+                strokeWidth="1.75"
+                strokeLinecap="round"
+              />
+            </svg>
+            Record
+          </a>
+        </div>
+      </header>
+
+      <div className="relative z-10 mx-5 h-px bg-[#f0f0f0]" />
+
+      {/* ── Stats strip ── */}
+      <div
+        className="relative z-10 mx-5 mt-4 grid grid-cols-2 rounded-2xl border border-[#f0f0f0] bg-white overflow-hidden shadow-sm shadow-black/[0.03]"
+        style={{ animation: "fadeUp 0.4s 0.05s ease both" }}
+      >
+        <div className="px-4 py-3 border-r border-[#f0f0f0]">
+          <p className="text-base font-bold text-[#171717] tabular-nums">
+            {fmt(totalRevenue, currencyCode)}
+          </p>
+          <p className="text-[10px] text-[#171717]/40 uppercase tracking-wider">
+            Revenue
+          </p>
+        </div>
+        <div className="px-4 py-3">
+          <p className="text-base font-bold text-[#171717] tabular-nums">
+            {totalItems}
+          </p>
+          <p className="text-[10px] text-[#171717]/40 uppercase tracking-wider">
+            Items
+          </p>
+        </div>
+      </div>
+
+      {/* ── Sheet Tabs ── */}
+      {sheets.length > 0 && (
+        <div
+          className="relative z-10 px-5 mt-4"
+          style={{ animation: "fadeUp 0.4s 0.08s ease both" }}
+        >
+          <p className="text-[10px] font-medium text-[#171717]/30 uppercase tracking-widest mb-2">
+            Sheet
+          </p>
+          <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
+            {/* All tab */}
+            <button
+              onClick={() => navigate({ sheet: "all" })}
+              className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold border transition-all duration-150 ${activeSheet === "all" ? "bg-[#171717] text-white border-[#171717] shadow-sm" : "bg-white text-[#171717]/50 border-[#f0f0f0] hover:border-[#ffb3d9]/50 hover:text-[#171717]/70"}`}
+            >
+              <FileText className="w-3 h-3" />
+              All Sheets
+            </button>
+            {sheets.map((sheet) => (
+              <button
+                key={sheet.id}
+                onClick={() => navigate({ sheet: sheet.id })}
+                className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold border transition-all duration-150 ${activeSheet === sheet.id ? "bg-[#ff79c6] text-white border-[#ff79c6] shadow-sm shadow-[#ff79c6]/25" : "bg-white text-[#171717]/50 border-[#f0f0f0] hover:border-[#ffb3d9]/50 hover:text-[#171717]/70"}`}
+              >
+                <FileText className="w-3 h-3" />
+                {sheet.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Controls ── */}
+      <div
+        className="relative z-10 px-5 mt-4 flex flex-col gap-3"
+        style={{ animation: "fadeUp 0.4s 0.1s ease both" }}
+      >
+        {/* Row 1: date pills + filter button + view toggle */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Date pills */}
+          <div className="flex gap-1.5 flex-1 overflow-x-auto scrollbar-hide min-w-0">
+            {DATE_OPTIONS.map((f) => {
+              const hasCustomDate = !!(dateFrom || dateTo);
+              const active = !hasCustomDate && dateFilter === f.value;
+              return (
+                <button
+                  key={f.value}
+                  onClick={() =>
+                    navigate({ date: f.value, dateFrom: "", dateTo: "" })
+                  }
+                  className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-150 ${active ? "bg-[#171717] text-white" : "bg-[#f0f0f0]/70 text-[#171717]/50 hover:text-[#171717]/70"}`}
+                >
+                  {f.label}
+                </button>
+              );
+            })}
+            {(dateFrom || dateTo) && (
+              <span className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium bg-[#ff79c6]/10 text-[#ff79c6] border border-[#ff79c6]/20">
+                <CalendarDays className="w-3 h-3" />
+                Custom range
+              </span>
+            )}
+          </div>
+
+          {/* Filter toggle */}
+          <button
+            onClick={() => setShowFilters((v) => !v)}
+            className={`relative flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-150 ${showFilters || activeFilterCount > 0 ? "bg-[#ff79c6]/10 text-[#ff79c6] border-[#ff79c6]/30" : "bg-[#f0f0f0]/70 text-[#171717]/50 border-transparent"}`}
+          >
+            <SlidersHorizontal className="w-3 h-3" />
+            Filter
+            {activeFilterCount > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-[#ff79c6] text-white text-[9px] font-bold flex items-center justify-center">
+                {activeFilterCount}
+              </span>
+            )}
+          </button>
+
+          {/* View toggle */}
+          <div className="flex items-center rounded-xl bg-[#f0f0f0]/70 p-0.5">
+            <button
+              onClick={() => navigate({ view: "by-sale" })}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 ${viewMode === "by-sale" ? "bg-white text-[#171717] shadow-sm" : "text-[#171717]/40 hover:text-[#171717]/60"}`}
+            >
+              <Clock className="w-3 h-3" />
+              By Sale
+            </button>
+            <button
+              onClick={() => navigate({ view: "by-item" })}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 ${viewMode === "by-item" ? "bg-white text-[#171717] shadow-sm" : "text-[#171717]/40 hover:text-[#171717]/60"}`}
+            >
+              <BarChart2 className="w-3 h-3" />
+              By Item
+            </button>
+          </div>
+        </div>
+
+        {/* Advanced filter panel */}
+        {showFilters && (
+          <div
+            className="bg-white border border-[#f0f0f0] rounded-2xl overflow-hidden shadow-sm"
+            style={{ animation: "fadeUp 0.2s ease both" }}
+          >
+            <div className="flex items-center justify-between px-4 py-3 border-b border-[#f0f0f0] bg-[#fafafa]">
+              <div className="flex items-center gap-2">
+                <SlidersHorizontal className="w-3.5 h-3.5 text-[#ff79c6]" />
+                <span className="text-xs font-semibold text-[#171717]">
+                  Filters
+                </span>
+                {activeFilterCount > 0 && (
+                  <span className="px-1.5 py-0.5 rounded-full bg-[#ff79c6] text-white text-[9px] font-bold">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </div>
+              {activeFilterCount > 0 && (
+                <button
+                  onClick={clearFilters}
+                  className="text-[10px] text-[#171717]/40 hover:text-[#ff79c6] transition-colors font-medium"
+                >
+                  Clear all
+                </button>
+              )}
+            </div>
+
+            <div className="p-4 flex flex-col gap-4">
+              {/* Item name */}
+              <div>
+                <label className="flex items-center gap-1.5 text-[10px] font-semibold text-[#171717]/40 uppercase tracking-wider mb-2">
+                  <Tag className="w-3 h-3" /> Item name
+                </label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#171717]/25 pointer-events-none" />
+                  <input
+                    type="text"
+                    placeholder="e.g. Shirt, Cap…"
+                    value={draftQ}
+                    onChange={(e) => setDraftQ(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && applySearch()}
+                    className="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl border border-[#f0f0f0] bg-[#f0f0f0]/50 text-[#171717] placeholder:text-[#171717]/25 outline-none focus:border-[#ff79c6] focus:bg-white focus:ring-2 focus:ring-[#ff79c6]/15 transition-all"
+                  />
+                </div>
+              </div>
+
+              {/* Price range */}
+              <div>
+                <label className="flex items-center gap-1.5 text-[10px] font-semibold text-[#171717]/40 uppercase tracking-wider mb-2">
+                  <DollarSign className="w-3 h-3" /> Price range
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    placeholder="Min"
+                    value={draftMin}
+                    onChange={(e) => setDraftMin(e.target.value)}
+                    className="w-full px-3 py-2.5 text-sm rounded-xl border border-[#f0f0f0] bg-[#f0f0f0]/50 text-[#171717] placeholder:text-[#171717]/25 outline-none focus:border-[#ff79c6] focus:bg-white focus:ring-2 focus:ring-[#ff79c6]/15 transition-all"
+                  />
+                  <span className="text-[#171717]/20 shrink-0">–</span>
+                  <input
+                    type="number"
+                    placeholder="Max"
+                    value={draftMax}
+                    onChange={(e) => setDraftMax(e.target.value)}
+                    className="w-full px-3 py-2.5 text-sm rounded-xl border border-[#f0f0f0] bg-[#f0f0f0]/50 text-[#171717] placeholder:text-[#171717]/25 outline-none focus:border-[#ff79c6] focus:bg-white focus:ring-2 focus:ring-[#ff79c6]/15 transition-all"
+                  />
+                </div>
+              </div>
+
+              {/* Custom date range */}
+              <div>
+                <label className="flex items-center gap-1.5 text-[10px] font-semibold text-[#171717]/40 uppercase tracking-wider mb-2">
+                  <CalendarDays className="w-3 h-3" /> Custom date range
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="date"
+                    value={draftDateFrom}
+                    onChange={(e) => setDraftDateFrom(e.target.value)}
+                    className="w-full px-3 py-2.5 text-sm rounded-xl border border-[#f0f0f0] bg-[#f0f0f0]/50 text-[#171717] outline-none focus:border-[#ff79c6] focus:bg-white focus:ring-2 focus:ring-[#ff79c6]/15 transition-all"
+                  />
+                  <span className="text-[#171717]/20 shrink-0">–</span>
+                  <input
+                    type="date"
+                    value={draftDateTo}
+                    onChange={(e) => setDraftDateTo(e.target.value)}
+                    className="w-full px-3 py-2.5 text-sm rounded-xl border border-[#f0f0f0] bg-[#f0f0f0]/50 text-[#171717] outline-none focus:border-[#ff79c6] focus:bg-white focus:ring-2 focus:ring-[#ff79c6]/15 transition-all"
+                  />
+                </div>
+                {(draftDateFrom || draftDateTo) && (
+                  <p className="text-[10px] text-[#ff79c6] mt-1.5">
+                    Overrides quick-date selection above.
+                  </p>
+                )}
+              </div>
+
+              {/* Apply button */}
+              <button
+                onClick={applySearch}
+                disabled={isPending}
+                className="w-full py-3 rounded-xl bg-[#ff79c6] hover:bg-[#ff79c6]/90 disabled:opacity-60 text-white text-sm font-semibold tracking-wide shadow-lg shadow-[#ff79c6]/25 transition-all duration-200 flex items-center justify-center gap-2"
+              >
+                {isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Search className="w-4 h-4" />
+                )}
+                Apply Filters
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Active filter chips */}
+        {(searchQuery || minPrice || maxPrice || dateFrom || dateTo) && (
+          <div className="flex flex-wrap gap-2">
+            {searchQuery && (
+              <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#ff79c6]/10 border border-[#ff79c6]/20 text-[10px] text-[#ff79c6] font-medium">
+                <Tag className="w-2.5 h-2.5" />"{searchQuery}"
+                <button
+                  onClick={() => {
+                    setDraftQ("");
+                    navigate({ q: "" });
+                  }}
+                >
+                  <X className="w-2.5 h-2.5" />
+                </button>
+              </span>
+            )}
+            {(minPrice || maxPrice) && (
+              <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#ff79c6]/10 border border-[#ff79c6]/20 text-[10px] text-[#ff79c6] font-medium">
+                <DollarSign className="w-2.5 h-2.5" />
+                {minPrice || "0"} – {maxPrice || "∞"}
+                <button
+                  onClick={() => {
+                    setDraftMin("");
+                    setDraftMax("");
+                    navigate({ minPrice: "", maxPrice: "" });
+                  }}
+                >
+                  <X className="w-2.5 h-2.5" />
+                </button>
+              </span>
+            )}
+            {(dateFrom || dateTo) && (
+              <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#ff79c6]/10 border border-[#ff79c6]/20 text-[10px] text-[#ff79c6] font-medium">
+                <CalendarDays className="w-2.5 h-2.5" />
+                {dateFrom || "Start"} – {dateTo || "End"}
+                <button
+                  onClick={() => {
+                    setDraftDateFrom("");
+                    setDraftDateTo("");
+                    navigate({ dateFrom: "", dateTo: "" });
+                  }}
+                >
+                  <X className="w-2.5 h-2.5" />
+                </button>
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ── Content ── */}
+      <div
+        className="relative z-10 flex-1 overflow-y-auto px-5 mt-4 pb-28"
+        style={{ animation: "fadeUp 0.4s 0.15s ease both" }}
+      >
+        {/* BY SALE */}
+        {viewMode === "by-sale" &&
+          (sessions.length === 0 ? (
+            <EmptyState
+              message="No sales found"
+              sub="Try changing your filters or record a new sale"
+            />
+          ) : (
+            <div className="flex flex-col gap-5">
+              {sessionsByDate.map(({ label, sessions: daySessions }) => (
+                <div key={label}>
+                  <p className="text-[10px] font-semibold text-[#171717]/25 uppercase tracking-widest mb-2">
+                    {label}
+                  </p>
+                  <div className="flex flex-col gap-2">
+                    {daySessions.map((group) => (
+                      <SaleSessionCard
+                        key={group.key}
+                        group={group}
+                        sheetName={sheetMap.get(group.sheetId) ?? "Sheet"}
+                        currencyCode={currencyCode}
+                        onUpdateItem={handleUpdateItem}
+                        onDeleteItem={handleDeleteItem}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ))}
+
+        {/* BY ITEM */}
+        {viewMode === "by-item" &&
+          (itemSummaries.length === 0 ? (
+            <EmptyState
+              message="No items found"
+              sub="Try changing your filters or record a new sale"
+            />
+          ) : (
+            <div className="bg-white border border-[#f0f0f0] rounded-2xl overflow-hidden shadow-sm shadow-black/[0.03]">
+              <div className="grid grid-cols-[1fr_auto_auto] gap-6 px-5 py-2.5 bg-[#fafafa] border-b border-[#f0f0f0]">
+                <SortBtn
+                  label="Item"
+                  field="name"
+                  current={sortField}
+                  dir={sortDir}
+                  onClick={() => toggleSort("name")}
+                />
+                <SortBtn
+                  label="Sales"
+                  field="qty"
+                  current={sortField}
+                  dir={sortDir}
+                  onClick={() => toggleSort("qty")}
+                />
+                <SortBtn
+                  label="Revenue"
+                  field="price"
+                  current={sortField}
+                  dir={sortDir}
+                  onClick={() => toggleSort("price")}
+                />
+              </div>
+              {itemSummaries.map((item) => (
+                <ItemRow
+                  key={item.name}
+                  item={item}
+                  currencyCode={currencyCode}
+                />
+              ))}
+            </div>
+          ))}
+      </div>
+
+      {/* FAB */}
+      <div className="fixed bottom-6 right-5 z-20">
+        <a
+          href="/record"
+          className="flex items-center gap-2 px-5 py-3.5 rounded-2xl bg-[#171717] text-white text-sm font-semibold shadow-2xl shadow-black/25 hover:bg-[#171717]/90 active:scale-[0.97] transition-all duration-200"
+        >
+          <div className="w-6 h-6 rounded-full bg-[#ff79c6] flex items-center justify-center shadow-sm shadow-[#ff79c6]/40">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+              <rect x="9" y="2" width="6" height="12" rx="3" fill="white" />
+              <path
+                d="M5 10a7 7 0 0014 0"
+                stroke="white"
+                strokeWidth="1.75"
+                strokeLinecap="round"
+              />
+            </svg>
+          </div>
+          Record a sale
+        </a>
+      </div>
+
+      <style>{`
+        @keyframes fadeDown { from{opacity:0;transform:translateY(-10px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes fadeUp   { from{opacity:0;transform:translateY(14px)}  to{opacity:1;transform:translateY(0)} }
+        .scrollbar-hide::-webkit-scrollbar { display:none; }
+        .scrollbar-hide { -ms-overflow-style:none; scrollbar-width:none; }
+      `}</style>
+    </main>
+  );
+}
