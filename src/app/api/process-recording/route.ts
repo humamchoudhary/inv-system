@@ -31,9 +31,7 @@ type OutputSchema = z.infer<typeof outputSchema>;
    2. Gemini client (typed + safe)
 ───────────────────────────────────────────── */
 
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY!,
-});
+const ai = new GoogleGenAI({});
 
 /* ─────────────────────────────────────────────
    3. API handler
