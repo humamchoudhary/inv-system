@@ -31,13 +31,12 @@ type OutputSchema = z.infer<typeof outputSchema>;
    2. Gemini client (typed + safe)
 ───────────────────────────────────────────── */
 
-const ai = new GoogleGenAI({});
-
 /* ─────────────────────────────────────────────
    3. API handler
 ───────────────────────────────────────────── */
 
 export async function POST(req: NextRequest) {
+  const ai = new GoogleGenAI({});
   try {
     const formData = await req.formData();
 
