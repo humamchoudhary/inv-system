@@ -13,17 +13,12 @@ export default async function page() {
     return "Loading";
   }
 
-  const user = await getUser(session.user.id);
-
-  const business = await getUserActiveBusiness(
-    session.user.id,
-    user?.last_business!,
-  );
+  const business = await getUserActiveBusiness(session.user.id);
   const sheets = await getBusinessSheets(business!.id);
 
   return (
     <RecordPage
-      activeBusiness={business}
+      activeBusiness={business!}
       sheets={sheets}
       onSave={async (data) => {
         "use server";

@@ -10,13 +10,14 @@ import { business } from "@/db/schema";
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
+  ctx: RouteContext<"/api/businesses/[id]">,
+  // { params }: { params: { id: string } },
 ) {
   const session = await auth();
   if (!session)
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
-  const { id } = await params;
+  const { id } = await ctx.params;
 
   let body: { name?: string; currency?: string };
   try {

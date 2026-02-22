@@ -37,5 +37,8 @@ export async function POST(req: NextRequest) {
       { status: 404 },
     );
   }
-  return false;
+  return NextResponse.json(
+    { message: "Could not switch business" },
+    { status: 404 },
+  );
 }

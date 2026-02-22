@@ -18,10 +18,7 @@ export default async function Index() {
 
   const user = await getUser(session.user.id);
 
-  const business = await getUserActiveBusiness(
-    session.user.id,
-    user?.last_business!,
-  );
+  const business = await getUserActiveBusiness(session.user.id);
   const businesses = await getUserBusinesses(session.user.id);
   const todaySnapshot = await getTotalSales(business!.id);
   console.log(todaySnapshot);
