@@ -20,6 +20,10 @@ export default async function ProfilePage() {
   const user = await getUser(session.user.id);
   if (!user) redirect("/signin");
 
+  if (session.user.first_auth) {
+    redirect("/welcome");
+  }
+
   // All businesses for this user
   const businesses = await getUserBusinesses(session.user.id);
 

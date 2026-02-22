@@ -15,10 +15,14 @@ export default async function Index() {
   if (!session) {
     redirect("/signin");
   }
-
-  const user = await getUser(session.user.id);
+  if (session.user.first_auth) {
+    redirect("/welcome");
+  }
 
   const business = await getUserActiveBusiness(session.user.id);
+  if (!business) {
+    redirect("/welcome");
+  }
   const businesses = await getUserBusinesses(session.user.id);
   const todaySnapshot = await getTotalSales(business!.id);
   console.log(todaySnapshot);

@@ -38,7 +38,7 @@ export default function page() {
 
           <form
             action={async (formData: FormData) => {
-              const result = formAction(formData);
+              formAction(formData);
             }}
             className="flex flex-col gap-4"
           >

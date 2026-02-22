@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 
+import { headers } from "next/headers";
 export default async function ProtectedLayout({
   children,
 }: Readonly<{
@@ -13,5 +14,6 @@ export default async function ProtectedLayout({
   if (!session) {
     redirect("/signin");
   }
+
   return <>{children}</>;
 }

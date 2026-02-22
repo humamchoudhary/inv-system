@@ -4,6 +4,13 @@ import bcrypt from "bcrypt";
 import { and, eq } from "drizzle-orm";
 import { business } from "../schema";
 
+export class UserExistsError extends Error {
+  constructor(message = "User Already Exists") {
+    super(message);
+    this.name = "UserExistsError";
+  }
+}
+
 export const createUser = async (data: {
   name: string;
   email: string;
@@ -14,7 +21,7 @@ export const createUser = async (data: {
   });
 
   if (existing) {
-    throw new Error("User Alreadt Exists");
+    throw new UserExistsError();
   }
 
   const hashedPassword = await bcrypt.hash(data.password, 10);

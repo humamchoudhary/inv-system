@@ -57,6 +57,10 @@ export default async function SalesRoute({ searchParams }: PageProps) {
   const session = await auth();
   if (!session) redirect("/signin");
 
+  if (session.user.first_auth) {
+    redirect("/welcome");
+  }
+
   const params = await searchParams;
 
   // const user = await getUser(session.user.id);

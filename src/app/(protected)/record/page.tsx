@@ -4,6 +4,7 @@ import { getUserActiveBusiness } from "@/db/service/business";
 import { createEntry } from "@/db/service/sale-entry";
 import { getBusinessSheets } from "@/db/service/sale-sheet";
 import { getUser } from "@/db/service/user";
+import { redirect } from "next/navigation";
 
 export default async function page() {
   const session = await auth();
@@ -11,6 +12,10 @@ export default async function page() {
   if (!session) {
     // redirect("/signin");
     return "Loading";
+  }
+
+  if (session.user.first_auth) {
+    redirect("/welcome");
   }
 
   const business = await getUserActiveBusiness(session.user.id);
