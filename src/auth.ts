@@ -12,6 +12,7 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
     accountsTable: accounts,
     sessionsTable: sessions,
   }),
+  trustHost: true,
 
   session: {
     strategy: "jwt", // ← required when using Credentials
