@@ -89,7 +89,7 @@ function BusinessSwitcher({
           </p>
           <button
             onClick={onClose}
-            className="w-7 h-7 rounded-lg bg-[#f0f0f0] flex items-center justify-center hover:bg-[#ffb3d9]/40 transition-colors"
+            className="w-7 h-7 rounded-lg bg-[#f0f0f0] flex items-center justify-center hover:bg-[#1e1e1e]/40 transition-colors"
           >
             <X className="w-3.5 h-3.5 text-[#171717]/60" />
           </button>
@@ -103,7 +103,7 @@ function BusinessSwitcher({
                 onClick={() => onSwitch(b.id)}
                 className={`w-full flex items-center justify-between px-4 py-3.5 rounded-2xl text-left transition-all duration-150 ${
                   isActive
-                    ? "bg-[#ff79c6]/10 border border-[#ff79c6]/20"
+                    ? "bg-[#171717]/10 border border-[#171717]/20"
                     : "hover:bg-[#f0f0f0]/70 border border-transparent"
                 }`}
               >
@@ -114,10 +114,10 @@ function BusinessSwitcher({
                 </span>
                 {isActive && (
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] text-[#ff79c6] font-medium uppercase tracking-wider">
+                    <span className="text-[10px] text-[#171717] font-medium uppercase tracking-wider">
                       Active
                     </span>
-                    <Check className="w-3.5 h-3.5 text-[#ff79c6]" />
+                    <Check className="w-3.5 h-3.5 text-[#171717]" />
                   </div>
                 )}
               </button>
@@ -127,7 +127,7 @@ function BusinessSwitcher({
         <div className="px-6 py-4 border-t border-[#f0f0f0]">
           <a
             href="/profile"
-            className="text-xs text-[#ff79c6] font-medium hover:underline"
+            className="text-xs text-[#171717] font-medium hover:underline"
           >
             Manage Businesses →
           </a>
@@ -142,8 +142,8 @@ function BusinessSwitcher({
 function Ambient() {
   return (
     <div className="fixed inset-0 pointer-events-none select-none">
-      <div className="absolute top-[-10%] right-[-15%] w-[420px] h-[420px] rounded-full bg-[#ffb3d9] opacity-[0.15] blur-[120px]" />
-      <div className="absolute bottom-[-5%] left-[-10%] w-[320px] h-[320px] rounded-full bg-[#ff79c6] opacity-[0.08] blur-[100px]" />
+      <div className="absolute top-[-10%] right-[-15%] w-[420px] h-[420px] rounded-full bg-[#1e1e1e] opacity-[0.15] blur-[120px]" />
+      <div className="absolute bottom-[-5%] left-[-10%] w-[320px] h-[320px] rounded-full bg-[#171717] opacity-[0.08] blur-[100px]" />
     </div>
   );
 }
@@ -162,8 +162,8 @@ function RecordButton({ compact = false }: { compact?: boolean }) {
         }`}
       >
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute -top-12 -right-12 w-48 h-48 rounded-full bg-[#ff79c6] opacity-20 blur-[60px]" />
-          <div className="absolute -bottom-8 -left-8 w-36 h-36 rounded-full bg-[#ffb3d9] opacity-10 blur-[50px]" />
+          <div className="absolute -top-12 -right-12 w-48 h-48 rounded-full bg-[#eeeeee] opacity-20 blur-[60px]" />
+          <div className="absolute -bottom-8 -left-8 w-36 h-36 rounded-full bg-[#eeeeee] opacity-10 blur-[50px]" />
         </div>
         <div
           className="absolute inset-0 opacity-[0.04] pointer-events-none"
@@ -180,17 +180,17 @@ function RecordButton({ compact = false }: { compact?: boolean }) {
             {!compact && (
               <>
                 <span
-                  className="absolute w-20 h-20 rounded-full border border-[#ff79c6]/20 animate-ping"
+                  className="absolute w-20 h-20 rounded-full border border-[#171717]/20 animate-ping"
                   style={{ animationDuration: "2s" }}
                 />
                 <span
-                  className="absolute w-14 h-14 rounded-full border border-[#ff79c6]/30 animate-ping"
+                  className="absolute w-14 h-14 rounded-full border border-[#171717]/30 animate-ping"
                   style={{ animationDuration: "2s", animationDelay: "0.3s" }}
                 />
               </>
             )}
             <div
-              className={`relative rounded-full bg-[#ff79c6] shadow-xl shadow-[#ff79c6]/50 flex items-center justify-center transition-shadow duration-300 group-hover:shadow-[#ff79c6]/70 ${compact ? "w-11 h-11" : "w-16 h-16"}`}
+              className={`relative rounded-full bg-[#171717] shadow-xl shadow-[#171717]/50 flex items-center justify-center transition-shadow duration-300 group-hover:shadow-[#171717]/70 ${compact ? "w-11 h-11" : "w-16 h-16"}`}
             >
               <svg
                 width={compact ? "20" : "28"}
@@ -249,7 +249,7 @@ function RecordButton({ compact = false }: { compact?: boolean }) {
                 height="14"
                 viewBox="0 0 14 14"
                 fill="none"
-                className="text-[#ff79c6] group-hover:translate-x-0.5 transition-transform duration-200"
+                className="text-white group-hover:translate-x-0.5 transition-transform duration-200"
               >
                 <path
                   d="M2 7h10M8 3l4 4-4 4"
@@ -261,7 +261,7 @@ function RecordButton({ compact = false }: { compact?: boolean }) {
               </svg>
             </div>
           ) : (
-            <div className="flex items-center gap-1.5 text-[#ff79c6] text-xs font-medium group-hover:gap-2.5 transition-all duration-200">
+            <div className="flex items-center gap-1.5 text-white text-xs font-medium group-hover:gap-2.5 transition-all duration-200">
               <span>Tap to start</span>
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                 <path
@@ -314,15 +314,15 @@ export default function HomePage({
               onClick={() => setSwitcherOpen(true)}
               className="flex items-center gap-1.5 group"
             >
-              <div className="w-2 h-2 rounded-full bg-[#ff79c6]" />
-              <span className="text-[17px] font-semibold tracking-tight text-[#171717] group-hover:text-[#ff79c6] transition-colors duration-150">
+              <div className="w-2 h-2 rounded-full bg-[#171717]" />
+              <span className="text-[17px] font-semibold tracking-tight text-[#171717] group-hover:text-[#171717] transition-colors duration-150">
                 {businessName}
               </span>
-              <ChevronDown className="w-3.5 h-3.5 text-[#171717]/40 group-hover:text-[#ff79c6] transition-colors duration-150 mt-0.5" />
+              <ChevronDown className="w-3.5 h-3.5 text-[#171717]/40 group-hover:text-[#171717] transition-colors duration-150 mt-0.5" />
             </button>
           ) : (
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-[#ff79c6]" />
+              <div className="w-2 h-2 rounded-full bg-[#171717]" />
               <h1 className="text-[17px] font-semibold tracking-tight text-[#171717]">
                 {businessName}
               </h1>
@@ -334,7 +334,7 @@ export default function HomePage({
         <a
           href="/profile"
           aria-label="Profile"
-          className="flex items-center justify-center w-9 h-9 rounded-xl bg-[#f0f0f0] hover:bg-[#ffb3d9]/40 transition-colors duration-200"
+          className="flex items-center justify-center w-9 h-9 rounded-xl bg-[#f0f0f0] hover:bg-[#1e1e1e]/40 transition-colors duration-200"
         >
           <User className="w-4 h-4 text-[#171717]/60" />
         </a>
@@ -359,7 +359,7 @@ export default function HomePage({
               Example
             </p>
             <div className="flex items-start gap-3 px-4 py-3.5 rounded-2xl bg-[#f0f0f0]/60 border border-[#f0f0f0]">
-              <span className="text-[#ff79c6] text-lg leading-none font-serif mt-0.5 select-none">
+              <span className="text-[#171717] text-lg leading-none font-serif mt-0.5 select-none">
                 "
               </span>
               <p className="text-sm text-[#171717]/50 leading-relaxed italic">
@@ -417,11 +417,11 @@ export default function HomePage({
           >
             <a
               href="/dashboard"
-              className="group flex items-center justify-between px-5 py-4 rounded-2xl border border-[#f0f0f0] bg-white hover:border-[#ffb3d9] hover:bg-[#fff5fb] transition-all duration-200"
+              className="group flex items-center justify-between px-5 py-4 rounded-2xl border border-[#f0f0f0] bg-white hover:border-[#1e1e1e] hover:bg-[#] transition-all duration-200"
             >
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-[#f0f0f0] group-hover:bg-[#ffb3d9]/30 flex items-center justify-center transition-colors duration-200">
-                  <BarChart2 className="w-4 h-4 text-[#171717]/50 group-hover:text-[#ff79c6] transition-colors duration-200" />
+                <div className="w-8 h-8 rounded-xl bg-[#f0f0f0] group-hover:bg-[#1e1e1e]/30 flex items-center justify-center transition-colors duration-200">
+                  <BarChart2 className="w-4 h-4 text-[#171717]/50 group-hover:text-[#171717] transition-colors duration-200" />
                 </div>
                 <span className="text-sm font-medium text-[#171717]">
                   View Dashboard
@@ -432,7 +432,7 @@ export default function HomePage({
                 height="14"
                 viewBox="0 0 14 14"
                 fill="none"
-                className="text-[#171717]/20 group-hover:text-[#ff79c6] group-hover:translate-x-0.5 transition-all duration-200"
+                className="text-[#171717]/20 group-hover:text-[#171717] group-hover:translate-x-0.5 transition-all duration-200"
               >
                 <path
                   d="M2 7h10M8 3l4 4-4 4"
@@ -446,11 +446,11 @@ export default function HomePage({
 
             <a
               href="/sales"
-              className="group flex items-center justify-between px-5 py-4 rounded-2xl border border-[#f0f0f0] bg-white hover:border-[#ffb3d9] hover:bg-[#fff5fb] transition-all duration-200"
+              className="group flex items-center justify-between px-5 py-4 rounded-2xl border border-[#f0f0f0] bg-white hover:border-[#1e1e1e] hover:bg-[#] transition-all duration-200"
             >
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-[#f0f0f0] group-hover:bg-[#ffb3d9]/30 flex items-center justify-center transition-colors duration-200">
-                  <ShoppingBag className="w-4 h-4 text-[#171717]/50 group-hover:text-[#ff79c6] transition-colors duration-200" />
+                <div className="w-8 h-8 rounded-xl bg-[#f0f0f0] group-hover:bg-[#1e1e1e]/30 flex items-center justify-center transition-colors duration-200">
+                  <ShoppingBag className="w-4 h-4 text-[#171717]/50 group-hover:text-[#171717] transition-colors duration-200" />
                 </div>
                 <span className="text-sm font-medium text-[#171717]">
                   Sales &amp; Inventory
@@ -461,7 +461,7 @@ export default function HomePage({
                 height="14"
                 viewBox="0 0 14 14"
                 fill="none"
-                className="text-[#171717]/20 group-hover:text-[#ff79c6] group-hover:translate-x-0.5 transition-all duration-200"
+                className="text-[#171717]/20 group-hover:text-[#171717] group-hover:translate-x-0.5 transition-all duration-200"
               >
                 <path
                   d="M2 7h10M8 3l4 4-4 4"

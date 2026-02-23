@@ -99,8 +99,8 @@ function MicIcon({ size = 28 }: { size?: number }) {
 function Ambient() {
   return (
     <div className="fixed inset-0 pointer-events-none select-none">
-      <div className="absolute -top-32 -right-32 w-[500px] h-[500px] rounded-full bg-[#ffb3d9] opacity-[0.15] blur-[130px]" />
-      <div className="absolute -bottom-20 -left-20 w-[360px] h-[360px] rounded-full bg-[#ff79c6] opacity-[0.08] blur-[100px]" />
+      <div className="absolute -top-32 -right-32 w-[500px] h-[500px] rounded-full bg-[#1e1e1e] opacity-[0.15] blur-[130px]" />
+      <div className="absolute -bottom-20 -left-20 w-[360px] h-[360px] rounded-full bg-[#171717] opacity-[0.08] blur-[100px]" />
     </div>
   );
 }
@@ -114,7 +114,7 @@ function Waveform({ active }: { active: boolean }) {
       {bars.map((h, i) => (
         <div
           key={i}
-          className={`rounded-full transition-all duration-300 ${active ? "bg-[#ff79c6]" : "bg-[#f0f0f0]"}`}
+          className={`rounded-full transition-all duration-300 ${active ? "bg-[#171717]" : "bg-[#f0f0f0]"}`}
           style={{
             width: "3px",
             height: active ? `${h * 2.2}px` : "4px",
@@ -230,12 +230,25 @@ export default function RecordPage({
   };
 
   // ── Mic start (shared) ──
+  // Replace the MediaRecorder instantiation inside startMic:
   const startMic = async (sheet: saleSheetType) => {
     setDuration(0);
     audioChunksRef.current = [];
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
+
+      // ✅ Pick the best supported MIME type (iOS needs mp4, others prefer webm)
+      const mimeType =
+        [
+          "audio/webm;codecs=opus",
+          "audio/webm",
+          "audio/mp4",
+          "audio/ogg;codecs=opus",
+          "", // fallback: let the browser decide
+        ].find((type) => type === "" || MediaRecorder.isTypeSupported(type)) ??
+        "";
+
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : {});
       mediaRecorderRef.current = recorder;
 
       recorder.ondataavailable = (e) => {
@@ -244,10 +257,10 @@ export default function RecordPage({
 
       recorder.onstop = () => {
         stream.getTracks().forEach((t) => t.stop());
-        processAudio(sheet);
+        processAudio(sheet, recorder.mimeType); // ✅ pass actual mimeType
       };
 
-      recorder.start(250); // collect chunks every 250ms
+      recorder.start(250);
       setIsRecording(true);
       setPageState("recording");
     } catch {
@@ -266,10 +279,13 @@ export default function RecordPage({
   };
 
   // ── Send audio to API ──
-  const processAudio = async (sheet: saleSheetType) => {
-    const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+  const processAudio = async (sheet: saleSheetType, mimeType: string) => {
+    const isMP4 = mimeType.includes("mp4");
+    const extension = isMP4 ? "m4a" : "webm";
+
+    const blob = new Blob(audioChunksRef.current, { type: mimeType });
     const formData = new FormData();
-    formData.append("audio", blob, "recording.webm");
+    formData.append("audio", blob, `recording.${extension}`); // ✅ correct extension
     formData.append("sheet_id", sheet.id);
     formData.append("business_id", activeBusiness?.id ?? "");
 
@@ -392,7 +408,7 @@ export default function RecordPage({
       {canGoBack && (
         <a
           href="/"
-          className="flex items-center gap-1 text-xs text-[#171717]/40 hover:text-[#ff79c6] transition-colors group"
+          className="flex items-center gap-1 text-xs text-[#171717]/40 hover:text-[#171717] transition-colors group"
         >
           <ChevronLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform duration-150" />
           Back
@@ -451,7 +467,7 @@ export default function RecordPage({
                   className={`w-full px-4 py-3 rounded-xl border text-sm text-[#171717] placeholder:text-[#171717]/25 bg-[#f0f0f0]/50 outline-none transition-all duration-200 ${
                     newSheetError
                       ? "border-red-300 focus:border-red-400 focus:ring-2 focus:ring-red-100"
-                      : "border-[#f0f0f0] focus:border-[#ff79c6] focus:bg-white focus:ring-2 focus:ring-[#ff79c6]/20"
+                      : "border-[#f0f0f0] focus:border-[#171717] focus:bg-white focus:ring-2 focus:ring-[#171717]/20"
                   }`}
                 />
                 {newSheetError && (
@@ -464,7 +480,7 @@ export default function RecordPage({
               <button
                 onClick={handleCreateSheet}
                 disabled={isCreatingSheet}
-                className="mt-4 w-full py-3.5 rounded-xl bg-[#ff79c6] hover:bg-[#ff79c6]/90 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-semibold tracking-wide shadow-lg shadow-[#ff79c6]/25 transition-all duration-200 flex items-center justify-center gap-2"
+                className="mt-4 w-full py-3.5 rounded-xl bg-[#171717] hover:bg-[#171717]/90 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-semibold tracking-wide shadow-lg shadow-[#171717]/25 transition-all duration-200 flex items-center justify-center gap-2"
               >
                 {isCreatingSheet ? (
                   <>
@@ -483,7 +499,7 @@ export default function RecordPage({
             {hasSheets && (
               <button
                 onClick={() => setPageState("sheet-select")}
-                className="mt-4 w-full text-center text-xs text-[#171717]/40 hover:text-[#ff79c6] transition-colors"
+                className="mt-4 w-full text-center text-xs text-[#171717]/40 hover:text-[#171717] transition-colors"
               >
                 ← Back to existing sheets
               </button>
@@ -527,12 +543,12 @@ export default function RecordPage({
                     onClick={() => setSelectedSheet(isSelected ? null : sheet)}
                     className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl border text-left transition-all duration-150 ${
                       isSelected
-                        ? "border-[#ff79c6] bg-[#fff5fb] shadow-sm"
-                        : "border-[#f0f0f0] bg-white hover:border-[#ffb3d9] hover:bg-[#fff5fb]/50"
+                        ? "border-[#171717] bg-[#] shadow-sm"
+                        : "border-[#f0f0f0] bg-white hover:border-[#1e1e1e] hover:bg-[#]/50"
                     }`}
                   >
                     <div
-                      className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors duration-150 ${isSelected ? "bg-[#ff79c6]" : "bg-[#f0f0f0]"}`}
+                      className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors duration-150 ${isSelected ? "bg-[#171717]" : "bg-[#f0f0f0]"}`}
                     >
                       <FileText
                         className={`w-4 h-4 ${isSelected ? "text-white" : "text-[#171717]/40"}`}
@@ -552,7 +568,7 @@ export default function RecordPage({
                       )}
                     </div>
                     {isSelected && (
-                      <div className="flex-shrink-0 w-5 h-5 rounded-full bg-[#ff79c6] flex items-center justify-center">
+                      <div className="flex-shrink-0 w-5 h-5 rounded-full bg-[#171717] flex items-center justify-center">
                         <Check className="w-3 h-3 text-white" />
                       </div>
                     )}
@@ -566,13 +582,13 @@ export default function RecordPage({
                 setNewSheetName("");
                 setPageState("sheet-create");
               }}
-              className="w-full flex items-center gap-3 px-5 py-4 rounded-2xl border border-dashed border-[#f0f0f0] hover:border-[#ff79c6]/40 hover:bg-[#fff5fb]/50 transition-all duration-150 group"
+              className="w-full flex items-center gap-3 px-5 py-4 rounded-2xl border border-dashed border-[#f0f0f0] hover:border-[#171717]/40 hover:bg-[#]/50 transition-all duration-150 group"
               style={{ animation: "fadeUp 0.45s 0.2s ease both" }}
             >
-              <div className="w-9 h-9 rounded-xl bg-[#f0f0f0] group-hover:bg-[#ffb3d9]/30 flex items-center justify-center flex-shrink-0 transition-colors duration-150">
-                <Plus className="w-4 h-4 text-[#171717]/40 group-hover:text-[#ff79c6] transition-colors duration-150" />
+              <div className="w-9 h-9 rounded-xl bg-[#f0f0f0] group-hover:bg-[#1e1e1e]/30 flex items-center justify-center flex-shrink-0 transition-colors duration-150">
+                <Plus className="w-4 h-4 text-[#171717]/40 group-hover:text-[#171717] transition-colors duration-150" />
               </div>
-              <span className="text-sm font-medium text-[#171717]/50 group-hover:text-[#ff79c6] transition-colors duration-150">
+              <span className="text-sm font-medium text-[#171717]/50 group-hover:text-[#171717] transition-colors duration-150">
                 New sheet
               </span>
             </button>
@@ -580,7 +596,7 @@ export default function RecordPage({
             <button
               onClick={() => selectedSheet && startMic(selectedSheet)}
               disabled={!selectedSheet}
-              className="w-full py-3.5 rounded-xl bg-[#ff79c6] hover:bg-[#ff79c6]/90 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold tracking-wide shadow-lg shadow-[#ff79c6]/25 transition-all duration-200 flex items-center justify-center gap-2"
+              className="w-full py-3.5 rounded-xl bg-[#171717] hover:bg-[#171717]/90 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold tracking-wide shadow-lg shadow-[#171717]/25 transition-all duration-200 flex items-center justify-center gap-2"
               style={{ animation: "fadeUp 0.45s 0.25s ease both" }}
             >
               {selectedSheet ? (
@@ -625,16 +641,16 @@ export default function RecordPage({
             style={{ animation: "fadeUp 0.45s 0.15s ease both" }}
           >
             <span
-              className="absolute w-36 h-36 rounded-full bg-[#ff79c6]/10 animate-ping"
+              className="absolute w-36 h-36 rounded-full bg-[#171717]/10 animate-ping"
               style={{ animationDuration: "1.6s" }}
             />
             <span
-              className="absolute w-28 h-28 rounded-full bg-[#ff79c6]/10 animate-ping"
+              className="absolute w-28 h-28 rounded-full bg-[#171717]/10 animate-ping"
               style={{ animationDuration: "1.6s", animationDelay: "0.3s" }}
             />
             <button
               onClick={handleStopRecording}
-              className="relative w-24 h-24 rounded-full bg-[#ff79c6] shadow-2xl shadow-[#ff79c6]/40 hover:shadow-[#ff79c6]/60 flex items-center justify-center transition-all duration-300 active:scale-95"
+              className="relative w-24 h-24 rounded-full bg-[#171717] shadow-2xl shadow-[#171717]/40 hover:shadow-[#171717]/60 flex items-center justify-center transition-all duration-300 active:scale-95"
             >
               <div className="w-8 h-8 rounded-md bg-white" />
             </button>
@@ -646,7 +662,7 @@ export default function RecordPage({
             <p className="text-3xl font-semibold tracking-tight text-[#171717] tabular-nums">
               {formatDuration(duration)}
             </p>
-            <p className="text-sm font-medium text-[#ff79c6]">
+            <p className="text-sm font-medium text-[#171717]">
               Tap to stop recording
             </p>
           </div>
@@ -687,7 +703,7 @@ export default function RecordPage({
             {[0, 1, 2].map((i) => (
               <div
                 key={i}
-                className="w-2.5 h-2.5 rounded-full bg-[#ff79c6]"
+                className="w-2.5 h-2.5 rounded-full bg-[#171717]"
                 style={{
                   animation: `barPulse 0.8s ${i * 0.15}s ease-in-out infinite alternate`,
                 }}
@@ -740,7 +756,7 @@ export default function RecordPage({
               {selectedSheet && (
                 <button
                   onClick={handleReRecord}
-                  className="w-full py-3.5 rounded-xl bg-[#ff79c6] hover:bg-[#ff79c6]/90 active:scale-[0.98] text-white text-sm font-semibold tracking-wide shadow-lg shadow-[#ff79c6]/25 transition-all duration-200 flex items-center justify-center gap-2"
+                  className="w-full py-3.5 rounded-xl bg-[#171717] hover:bg-[#171717]/90 active:scale-[0.98] text-white text-sm font-semibold tracking-wide shadow-lg shadow-[#171717]/25 transition-all duration-200 flex items-center justify-center gap-2"
                 >
                   <MicIcon size={16} />
                   Try Again
@@ -769,7 +785,7 @@ export default function RecordPage({
         <Ambient />
         <div className="relative z-10 flex flex-col items-center text-center gap-6 w-full max-w-sm">
           <div style={{ animation: "fadeUp 0.4s ease both" }}>
-            <div className="relative w-16 h-16 rounded-full bg-[#ff79c6] shadow-xl shadow-[#ff79c6]/40 flex items-center justify-center mx-auto">
+            <div className="relative w-16 h-16 rounded-full bg-[#171717] shadow-xl shadow-[#171717]/40 flex items-center justify-center mx-auto">
               <svg viewBox="0 0 40 40" fill="none" className="w-8 h-8">
                 <path
                   d="M10 20.5l7 7 13-14"
@@ -785,7 +801,7 @@ export default function RecordPage({
             </div>
           </div>
           <div style={{ animation: "fadeUp 0.4s 0.15s ease both" }}>
-            <p className="text-xs font-medium text-[#ff79c6] uppercase tracking-widest mb-1">
+            <p className="text-xs font-medium text-[#171717] uppercase tracking-widest mb-1">
               Saved
             </p>
             <h2 className="text-2xl font-semibold tracking-tight text-[#171717]">
@@ -798,7 +814,7 @@ export default function RecordPage({
           >
             <button
               onClick={handleReRecord}
-              className="w-full py-3.5 rounded-xl bg-[#ff79c6] hover:bg-[#ff79c6]/90 active:scale-[0.98] text-white text-sm font-semibold tracking-wide shadow-lg shadow-[#ff79c6]/25 transition-all duration-200 flex items-center justify-center gap-2"
+              className="w-full py-3.5 rounded-xl bg-[#171717] hover:bg-[#171717]/90 active:scale-[0.98] text-white text-sm font-semibold tracking-wide shadow-lg shadow-[#171717]/25 transition-all duration-200 flex items-center justify-center gap-2"
             >
               <MicIcon size={16} />
               Record another sale
@@ -884,7 +900,7 @@ export default function RecordPage({
                 return (
                   <div
                     key={item.id}
-                    className={`grid grid-cols-[1fr_auto_auto] gap-2 items-center px-4 py-3 ${idx < items.length - 1 ? "border-b border-[#f0f0f0]" : ""} ${isEditing ? "bg-[#fff5fb]" : "hover:bg-[#f0f0f0]/30"} transition-colors duration-100`}
+                    className={`grid grid-cols-[1fr_auto_auto] gap-2 items-center px-4 py-3 ${idx < items.length - 1 ? "border-b border-[#f0f0f0]" : ""} ${isEditing ? "bg-[#]" : "hover:bg-[#f0f0f0]/30"} transition-colors duration-100`}
                   >
                     {isEditing ? (
                       <>
@@ -894,7 +910,7 @@ export default function RecordPage({
                           onChange={(e) =>
                             updateItem(item.id, "name", e.target.value)
                           }
-                          className="text-sm text-[#171717] bg-white border border-[#ff79c6] rounded-lg px-2.5 py-1.5 outline-none w-full"
+                          className="text-sm text-[#171717] bg-white border border-[#171717] rounded-lg px-2.5 py-1.5 outline-none w-full"
                           placeholder="Item name"
                         />
                         <input
@@ -907,7 +923,7 @@ export default function RecordPage({
                           onKeyDown={(e) =>
                             e.key === "Enter" && setEditingId(null)
                           }
-                          className="text-sm text-[#171717] bg-white border border-[#ff79c6] rounded-lg px-2.5 py-1.5 outline-none text-right w-20"
+                          className="text-sm text-[#171717] bg-white border border-[#171717] rounded-lg px-2.5 py-1.5 outline-none text-right w-20"
                           placeholder="0"
                         />
                       </>
@@ -944,7 +960,7 @@ export default function RecordPage({
               {/* Add item row */}
               <button
                 onClick={addItem}
-                className="w-full flex items-center gap-2 px-4 py-3 text-xs text-[#171717]/40 hover:text-[#ff79c6] hover:bg-[#fff5fb] transition-colors duration-150 border-t border-[#f0f0f0]"
+                className="w-full flex items-center gap-2 px-4 py-3 text-xs text-[#171717]/40 hover:text-[#171717] hover:bg-[#] transition-colors duration-150 border-t border-[#f0f0f0]"
               >
                 <Plus className="w-3.5 h-3.5" />
                 Add item
@@ -980,7 +996,7 @@ export default function RecordPage({
             <button
               onClick={handleSave}
               disabled={isSaving || items.length === 0}
-              className="w-full py-3.5 rounded-xl bg-[#ff79c6] hover:bg-[#ff79c6]/90 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold tracking-wide shadow-lg shadow-[#ff79c6]/25 transition-all duration-200 flex items-center justify-center gap-2"
+              className="w-full py-3.5 rounded-xl bg-[#171717] hover:bg-[#171717]/90 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold tracking-wide shadow-lg shadow-[#171717]/25 transition-all duration-200 flex items-center justify-center gap-2"
             >
               {isSaving ? (
                 <>

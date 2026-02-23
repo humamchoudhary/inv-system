@@ -51,8 +51,8 @@ export interface ProfileProps {
 function Ambient() {
   return (
     <div className="fixed inset-0 pointer-events-none select-none z-0">
-      <div className="absolute top-[-10%] right-[-15%] w-[440px] h-[440px] rounded-full bg-[#ffb3d9] opacity-[0.11] blur-[130px]" />
-      <div className="absolute bottom-[-5%] left-[-10%] w-[340px] h-[340px] rounded-full bg-[#ff79c6] opacity-[0.07] blur-[110px]" />
+      <div className="absolute top-[-10%] right-[-15%] w-[440px] h-[440px] rounded-full bg-[#1e1e1e] opacity-[0.11] blur-[130px]" />
+      <div className="absolute bottom-[-5%] left-[-10%] w-[340px] h-[340px] rounded-full bg-[#171717] opacity-[0.07] blur-[110px]" />
     </div>
   );
 }
@@ -69,7 +69,7 @@ function Avatar({ name, size = "lg" }: { name: string; size?: "sm" | "lg" }) {
   const text = size === "lg" ? "text-xl" : "text-xs";
   return (
     <div
-      className={`${dim} rounded-2xl bg-gradient-to-br from-[#ff79c6] to-[#ffb3d9] flex items-center justify-center shadow-lg shadow-[#ff79c6]/20 flex-shrink-0`}
+      className={`${dim} rounded-2xl bg-gradient-to-br from-[#171717] to-[#1e1e1e] flex items-center justify-center shadow-lg shadow-[#171717]/20 flex-shrink-0`}
     >
       <span className={`${text} font-bold text-white tracking-tight`}>
         {initials || <User className="w-5 h-5 text-white" />}
@@ -231,7 +231,7 @@ function EditBusinessModal({
                 setName(e.target.value);
                 setError("");
               }}
-              className="w-full px-4 py-3 rounded-xl border border-[#f0f0f0] bg-[#fafafa] text-sm text-[#171717] outline-none focus:border-[#ff79c6] focus:bg-white focus:ring-2 focus:ring-[#ff79c6]/15 transition-all"
+              className="w-full px-4 py-3 rounded-xl border border-[#f0f0f0] bg-[#fafafa] text-sm text-[#171717] outline-none focus:border-[#171717] focus:bg-white focus:ring-2 focus:ring-[#171717]/15 transition-all"
               placeholder="e.g. My Shop"
             />
           </div>
@@ -243,7 +243,7 @@ function EditBusinessModal({
             <select
               value={currency}
               onChange={(e) => setCurrency(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border border-[#f0f0f0] bg-[#fafafa] text-sm text-[#171717] outline-none focus:border-[#ff79c6] focus:bg-white focus:ring-2 focus:ring-[#ff79c6]/15 transition-all appearance-none"
+              className="w-full px-4 py-3 rounded-xl border border-[#f0f0f0] bg-[#fafafa] text-sm text-[#171717] outline-none focus:border-[#171717] focus:bg-white focus:ring-2 focus:ring-[#171717]/15 transition-all appearance-none"
             >
               {CURRENCIES.map((c) => (
                 <option key={c} value={c}>
@@ -258,7 +258,7 @@ function EditBusinessModal({
           <button
             onClick={handleSave}
             disabled={isPending}
-            className="w-full py-3.5 rounded-xl bg-[#ff79c6] hover:bg-[#ff79c6]/90 disabled:opacity-60 text-white text-sm font-semibold shadow-lg shadow-[#ff79c6]/25 transition-all duration-200 flex items-center justify-center gap-2 mt-1"
+            className="w-full py-3.5 rounded-xl bg-[#171717] hover:bg-[#171717]/90 disabled:opacity-60 text-white text-sm font-semibold shadow-lg shadow-[#171717]/25 transition-all duration-200 flex items-center justify-center gap-2 mt-1"
           >
             {isPending ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -323,7 +323,7 @@ function ChangePasswordModal({ onClose }: { onClose: () => void }) {
   };
 
   const inputClass =
-    "w-full px-4 py-3 rounded-xl border border-[#f0f0f0] bg-[#fafafa] text-sm text-[#171717] outline-none focus:border-[#ff79c6] focus:bg-white focus:ring-2 focus:ring-[#ff79c6]/15 transition-all";
+    "w-full px-4 py-3 rounded-xl border border-[#f0f0f0] bg-[#fafafa] text-sm text-[#171717] outline-none focus:border-[#171717] focus:bg-white focus:ring-2 focus:ring-[#171717]/15 transition-all";
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center">
@@ -400,7 +400,7 @@ function ChangePasswordModal({ onClose }: { onClose: () => void }) {
           <button
             onClick={handleSave}
             disabled={isPending}
-            className="w-full py-3.5 rounded-xl bg-[#ff79c6] hover:bg-[#ff79c6]/90 disabled:opacity-60 text-white text-sm font-semibold shadow-lg shadow-[#ff79c6]/25 transition-all duration-200 flex items-center justify-center gap-2 mt-1"
+            className="w-full py-3.5 rounded-xl bg-[#171717] hover:bg-[#171717]/90 disabled:opacity-60 text-white text-sm font-semibold shadow-lg shadow-[#171717]/25 transition-all duration-200 flex items-center justify-center gap-2 mt-1"
           >
             {isPending ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -472,13 +472,13 @@ function BusinessSwitcherOverlay({
                 key={b.id}
                 onClick={() => handleSwitch(b.id)}
                 className={`w-full flex items-center gap-4 px-5 py-3.5 transition-colors duration-100 ${
-                  isActive ? "bg-[#ff79c6]/5" : "hover:bg-[#fafafa]"
+                  isActive ? "bg-[#171717]/5" : "hover:bg-[#fafafa]"
                 }`}
               >
                 <div
                   className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
                     isActive
-                      ? "bg-[#ff79c6] shadow-md shadow-[#ff79c6]/30"
+                      ? "bg-[#171717] shadow-md shadow-[#171717]/30"
                       : "bg-[#f0f0f0]"
                   }`}
                 >
@@ -493,7 +493,7 @@ function BusinessSwitcherOverlay({
                 <div className="flex-1 text-left min-w-0">
                   <p
                     className={`text-sm font-semibold truncate ${
-                      isActive ? "text-[#ff79c6]" : "text-[#171717]"
+                      isActive ? "text-[#171717]" : "text-[#171717]"
                     }`}
                   >
                     {b.name}
@@ -501,9 +501,9 @@ function BusinessSwitcherOverlay({
                   <p className="text-[10px] text-[#171717]/35">{b.currency}</p>
                 </div>
                 {isActive && (
-                  <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-[#ff79c6]/10 border border-[#ff79c6]/20 shrink-0">
-                    <Check className="w-2.5 h-2.5 text-[#ff79c6]" />
-                    <span className="text-[9px] font-bold text-[#ff79c6] uppercase tracking-wider">
+                  <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-[#171717]/10 border border-[#171717]/20 shrink-0">
+                    <Check className="w-2.5 h-2.5 text-[#171717]" />
+                    <span className="text-[9px] font-bold text-[#171717] uppercase tracking-wider">
                       Active
                     </span>
                   </span>
@@ -516,7 +516,7 @@ function BusinessSwitcherOverlay({
         <div className="border-t border-[#f0f0f0] px-5 pt-3">
           <a
             href="/profile"
-            className="flex items-center gap-2 text-sm text-[#171717]/50 hover:text-[#ff79c6] transition-colors font-medium"
+            className="flex items-center gap-2 text-sm text-[#171717]/50 hover:text-[#171717] transition-colors font-medium"
           >
             Manage Businesses
             <ChevronRight className="w-4 h-4" />
@@ -700,7 +700,7 @@ export default function ProfileClient({
         <div className="flex items-center gap-3">
           <a
             href="/"
-            className="flex items-center justify-center w-8 h-8 rounded-xl bg-[#f0f0f0] hover:bg-[#ffb3d9]/30 transition-colors duration-200"
+            className="flex items-center justify-center w-8 h-8 rounded-xl bg-[#f0f0f0] hover:bg-[#1e1e1e]/30 transition-colors duration-200"
           >
             <ChevronLeft className="w-4 h-4 text-[#171717]/60" />
           </a>
@@ -709,7 +709,7 @@ export default function ProfileClient({
           </h1>
         </div>
         {isPending && (
-          <Loader2 className="w-4 h-4 text-[#ff79c6] animate-spin" />
+          <Loader2 className="w-4 h-4 text-[#171717] animate-spin" />
         )}
       </header>
 
@@ -732,7 +732,7 @@ export default function ProfileClient({
             }}
           />
           {/* Pink glow */}
-          <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full bg-[#ff79c6] opacity-20 blur-[40px] pointer-events-none" />
+          <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full bg-[#171717] opacity-20 blur-[40px] pointer-events-none" />
 
           <div className="relative z-10">
             <Avatar name={draftName || userEmail} />
@@ -753,12 +753,12 @@ export default function ProfileClient({
                       setEditingName(false);
                     }
                   }}
-                  className="flex-1 min-w-0 px-3 py-1.5 text-sm rounded-xl bg-white/10 text-white border border-white/20 outline-none focus:border-[#ff79c6] focus:ring-1 focus:ring-[#ff79c6]/40 placeholder:text-white/30 transition-all"
+                  className="flex-1 min-w-0 px-3 py-1.5 text-sm rounded-xl bg-white/10 text-white border border-white/20 outline-none focus:border-[#171717] focus:ring-1 focus:ring-[#171717]/40 placeholder:text-white/30 transition-all"
                   placeholder="Your name"
                 />
                 <button
                   onClick={handleSaveName}
-                  className="w-7 h-7 rounded-lg bg-[#ff79c6] flex items-center justify-center shrink-0"
+                  className="w-7 h-7 rounded-lg bg-[#171717] flex items-center justify-center shrink-0"
                 >
                   <Check className="w-3.5 h-3.5 text-white" />
                 </button>
@@ -805,17 +805,17 @@ export default function ProfileClient({
                 <div
                   key={b.id}
                   className={`flex items-center gap-4 px-5 py-4 border-b border-[#f0f0f0] last:border-0 ${
-                    isActive ? "bg-[#ff79c6]/[0.03]" : ""
+                    isActive ? "bg-[#171717]/[0.03]" : ""
                   }`}
                 >
                   {/* Icon */}
                   <div
                     className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-                      isActive ? "bg-[#ff79c6]/15" : "bg-[#f0f0f0]"
+                      isActive ? "bg-[#171717]/15" : "bg-[#f0f0f0]"
                     }`}
                   >
                     <Building2
-                      className={`w-4 h-4 ${isActive ? "text-[#ff79c6]" : "text-[#171717]/35"}`}
+                      className={`w-4 h-4 ${isActive ? "text-[#171717]" : "text-[#171717]/35"}`}
                     />
                   </div>
 
@@ -823,7 +823,7 @@ export default function ProfileClient({
                   <div className="flex-1 min-w-0">
                     <p
                       className={`text-sm font-semibold truncate ${
-                        isActive ? "text-[#ff79c6]" : "text-[#171717]"
+                        isActive ? "text-[#171717]" : "text-[#171717]"
                       }`}
                     >
                       {b.name}
@@ -835,9 +835,9 @@ export default function ProfileClient({
 
                   {/* Active badge */}
                   {isActive && (
-                    <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-[#ff79c6]/10 border border-[#ff79c6]/20 shrink-0">
-                      <Check className="w-2.5 h-2.5 text-[#ff79c6]" />
-                      <span className="text-[9px] font-bold text-[#ff79c6] uppercase tracking-wider">
+                    <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-[#171717]/10 border border-[#171717]/20 shrink-0">
+                      <Check className="w-2.5 h-2.5 text-[#171717]" />
+                      <span className="text-[9px] font-bold text-[#171717] uppercase tracking-wider">
                         Active
                       </span>
                     </span>
@@ -846,7 +846,7 @@ export default function ProfileClient({
                   {/* Edit button */}
                   <button
                     onClick={() => setEditingBusiness(b)}
-                    className="w-8 h-8 rounded-xl bg-[#f0f0f0] hover:bg-[#ffb3d9]/30 flex items-center justify-center transition-colors shrink-0"
+                    className="w-8 h-8 rounded-xl bg-[#f0f0f0] hover:bg-[#1e1e1e]/30 flex items-center justify-center transition-colors shrink-0"
                   >
                     <Pencil className="w-3.5 h-3.5 text-[#171717]/40" />
                   </button>
@@ -875,10 +875,10 @@ export default function ProfileClient({
               href="/create-business"
               className="flex items-center gap-3 px-5 py-3.5 border-t border-[#f0f0f0] hover:bg-[#fafafa] transition-colors"
             >
-              <div className="w-9 h-9 rounded-xl bg-[#ff79c6]/10 border border-[#ff79c6]/20 flex items-center justify-center shrink-0">
-                <Plus className="w-4 h-4 text-[#ff79c6]" />
+              <div className="w-9 h-9 rounded-xl bg-[#171717]/10 border border-[#171717]/20 flex items-center justify-center shrink-0">
+                <Plus className="w-4 h-4 text-[#171717]" />
               </div>
-              <span className="text-sm font-medium text-[#ff79c6]">
+              <span className="text-sm font-medium text-[#171717]">
                 Add Business
               </span>
             </a>

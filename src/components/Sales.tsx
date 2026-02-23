@@ -245,7 +245,7 @@ function InlineEdit({
           setDraft(value);
           setEditing(true);
         }}
-        className={`group/ie flex items-center gap-1 text-left min-w-0 transition-colors duration-100 hover:text-[#ff79c6] ${className}`}
+        className={`group/ie flex items-center gap-1 text-left min-w-0 transition-colors duration-100 hover:text-[#171717] ${className}`}
         title="Click to edit"
       >
         <span className="truncate">
@@ -268,7 +268,7 @@ function InlineEdit({
           if (e.key === "Enter") commit();
           if (e.key === "Escape") cancel();
         }}
-        className="flex-1 min-w-0 px-2 py-1 text-sm rounded-lg border border-[#ff79c6] bg-white text-[#171717] outline-none ring-2 ring-[#ff79c6]/20"
+        className="flex-1 min-w-0 px-2 py-1 text-sm rounded-lg border border-[#171717] bg-white text-[#171717] outline-none ring-2 ring-[#171717]/20"
         placeholder={placeholder}
       />
       <button
@@ -276,7 +276,7 @@ function InlineEdit({
           e.preventDefault();
           commit();
         }}
-        className="w-6 h-6 rounded-md bg-[#ff79c6] flex items-center justify-center shrink-0 shadow-sm shadow-[#ff79c6]/30"
+        className="w-6 h-6 rounded-md bg-[#171717] flex items-center justify-center shrink-0 shadow-sm shadow-[#171717]/30"
       >
         <Check className="w-3 h-3 text-white" />
       </button>
@@ -300,8 +300,8 @@ function InlineEdit({
 function Ambient() {
   return (
     <div className="fixed inset-0 pointer-events-none select-none z-0">
-      <div className="absolute top-[-10%] right-[-15%] w-[420px] h-[420px] rounded-full bg-[#ffb3d9] opacity-[0.12] blur-[120px]" />
-      <div className="absolute bottom-[-5%] left-[-10%] w-[320px] h-[320px] rounded-full bg-[#ff79c6] opacity-[0.07] blur-[100px]" />
+      <div className="absolute top-[-10%] right-[-15%] w-[420px] h-[420px] rounded-full bg-[#1e1e1e] opacity-[0.12] blur-[120px]" />
+      <div className="absolute bottom-[-5%] left-[-10%] w-[320px] h-[320px] rounded-full bg-[#171717] opacity-[0.07] blur-[100px]" />
     </div>
   );
 }
@@ -420,8 +420,8 @@ function SaleSessionCard({
     <div
       className={`bg-white border rounded-2xl overflow-hidden transition-all duration-200 ${
         expanded
-          ? "border-[#ffb3d9]/60 shadow-md shadow-[#ff79c6]/08"
-          : "border-[#f0f0f0] hover:border-[#ffb3d9]/40"
+          ? "border-[#1e1e1e]/60 shadow-md shadow-[#171717]/08"
+          : "border-[#f0f0f0] hover:border-[#1e1e1e]/40"
       }`}
     >
       {/* Clickable header */}
@@ -502,7 +502,7 @@ function SaleSessionCard({
             <span className="text-xs font-semibold text-[#171717]/35 uppercase tracking-wider">
               Total
             </span>
-            <span className="text-sm font-bold text-[#ff79c6] tabular-nums">
+            <span className="text-sm font-bold text-[#171717] tabular-nums">
               {formatCurrency(liveTotal, currencyCode)}
             </span>
           </div>
@@ -529,8 +529,8 @@ function ItemSummaryRow({
 
   return (
     <div className="flex items-center gap-4 px-5 py-4 border-b border-[#f0f0f0] last:border-0 hover:bg-[#fdfcff] transition-colors duration-100">
-      <div className="w-8 h-8 rounded-xl bg-[#ff79c6]/10 flex items-center justify-center shrink-0">
-        <span className="text-[10px] font-bold text-[#ff79c6]">
+      <div className="w-8 h-8 rounded-xl bg-[#171717]/10 flex items-center justify-center shrink-0">
+        <span className="text-[10px] font-bold text-[#171717]">
           {item.name.slice(0, 2).toUpperCase()}
         </span>
       </div>
@@ -542,7 +542,7 @@ function ItemSummaryRow({
         <div className="flex items-center gap-2 mt-1">
           <div className="h-1 flex-1 rounded-full bg-[#f0f0f0] overflow-hidden">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-[#ff79c6] to-[#ffb3d9] transition-all duration-500"
+              className="h-full rounded-full bg-gradient-to-r from-[#171717] to-[#1e1e1e] transition-all duration-500"
               style={{ width: `${pct}%` }}
             />
           </div>
@@ -587,7 +587,7 @@ function SortBtn({
     <button
       onClick={onClick}
       className={`flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider transition-colors duration-150 ${
-        active ? "text-[#ff79c6]" : "text-[#171717]/30 hover:text-[#171717]/50"
+        active ? "text-[#171717]" : "text-[#171717]/30 hover:text-[#171717]/50"
       }`}
     >
       {label}
@@ -622,7 +622,7 @@ function FilterPanel({
   activeCount: number;
 }) {
   const inputCls =
-    "w-full px-3 py-2.5 text-sm rounded-xl border border-[#f0f0f0] bg-[#f0f0f0]/50 text-[#171717] placeholder:text-[#171717]/25 outline-none focus:border-[#ff79c6] focus:bg-white focus:ring-2 focus:ring-[#ff79c6]/15 transition-all duration-200";
+    "w-full px-3 py-2.5 text-sm rounded-xl border border-[#f0f0f0] bg-[#f0f0f0]/50 text-[#171717] placeholder:text-[#171717]/25 outline-none focus:border-[#171717] focus:bg-white focus:ring-2 focus:ring-[#171717]/15 transition-all duration-200";
 
   return (
     <div
@@ -632,12 +632,12 @@ function FilterPanel({
       {/* Panel header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-[#f0f0f0] bg-[#fafafa]">
         <div className="flex items-center gap-2">
-          <SlidersHorizontal className="w-3.5 h-3.5 text-[#ff79c6]" />
+          <SlidersHorizontal className="w-3.5 h-3.5 text-[#171717]" />
           <span className="text-xs font-semibold text-[#171717]">
             Advanced Filters
           </span>
           {activeCount > 0 && (
-            <span className="px-1.5 py-0.5 rounded-full bg-[#ff79c6] text-white text-[9px] font-bold">
+            <span className="px-1.5 py-0.5 rounded-full bg-[#171717] text-white text-[9px] font-bold">
               {activeCount} active
             </span>
           )}
@@ -645,7 +645,7 @@ function FilterPanel({
         {activeCount > 0 && (
           <button
             onClick={onClear}
-            className="text-[10px] text-[#171717]/40 hover:text-[#ff79c6] transition-colors font-medium"
+            className="text-[10px] text-[#171717]/40 hover:text-[#171717] transition-colors font-medium"
           >
             Clear all
           </button>
@@ -723,7 +723,7 @@ function FilterPanel({
             />
           </div>
           {(filters.dateFrom || filters.dateTo) && (
-            <p className="text-[10px] text-[#ff79c6] mt-1.5">
+            <p className="text-[10px] text-[#171717] mt-1.5">
               Custom range overrides quick-date pills above.
             </p>
           )}
@@ -740,7 +740,7 @@ function FilterPanel({
                 onClick={() => onChange({ sheetId: "all" })}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-150 ${
                   filters.sheetId === "all"
-                    ? "bg-[#ff79c6] text-white shadow-sm shadow-[#ff79c6]/25"
+                    ? "bg-[#171717] text-white shadow-sm shadow-[#171717]/25"
                     : "bg-[#f0f0f0]/70 text-[#171717]/50 hover:text-[#171717]/70"
                 }`}
               >
@@ -752,7 +752,7 @@ function FilterPanel({
                   onClick={() => onChange({ sheetId: s.id })}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-150 ${
                     filters.sheetId === s.id
-                      ? "bg-[#ff79c6] text-white shadow-sm shadow-[#ff79c6]/25"
+                      ? "bg-[#171717] text-white shadow-sm shadow-[#171717]/25"
                       : "bg-[#f0f0f0]/70 text-[#171717]/50 hover:text-[#171717]/70"
                   }`}
                 >
@@ -966,7 +966,7 @@ export default function SalesPage({
         <div className="flex items-center gap-3">
           <a
             href="/"
-            className="flex items-center justify-center w-8 h-8 rounded-xl bg-[#f0f0f0] hover:bg-[#ffb3d9]/30 transition-colors duration-200"
+            className="flex items-center justify-center w-8 h-8 rounded-xl bg-[#f0f0f0] hover:bg-[#1e1e1e]/30 transition-colors duration-200"
           >
             <ChevronLeft className="w-4 h-4 text-[#171717]/60" />
           </a>
@@ -979,7 +979,7 @@ export default function SalesPage({
         </div>
         <a
           href="/record"
-          className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#ff79c6] text-white text-xs font-semibold shadow-md shadow-[#ff79c6]/30 hover:bg-[#ff79c6]/90 active:scale-[0.97] transition-all duration-200"
+          className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#171717] text-white text-xs font-semibold shadow-md shadow-[#171717]/30 hover:bg-[#171717]/90 active:scale-[0.97] transition-all duration-200"
         >
           <Mic className="w-3.5 h-3.5" />
           Record
@@ -1049,14 +1049,14 @@ export default function SalesPage({
             onClick={() => setShowFilters((v) => !v)}
             className={`relative flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-150 ${
               showFilters || advActiveCount > 0
-                ? "bg-[#ff79c6]/10 text-[#ff79c6] border-[#ff79c6]/30"
+                ? "bg-[#171717]/10 text-[#171717] border-[#171717]/30"
                 : "bg-[#f0f0f0]/70 text-[#171717]/50 border-transparent"
             }`}
           >
             <SlidersHorizontal className="w-3 h-3" />
             Filter
             {advActiveCount > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-[#ff79c6] text-white text-[9px] font-bold flex items-center justify-center">
+              <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-[#171717] text-white text-[9px] font-bold flex items-center justify-center">
                 {advActiveCount}
               </span>
             )}
@@ -1105,7 +1105,7 @@ export default function SalesPage({
 
           {/* Active filter chips (dismissible) */}
           {advFilters.itemName && (
-            <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#ff79c6]/10 border border-[#ff79c6]/20 text-[10px] text-[#ff79c6] font-medium">
+            <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#171717]/10 border border-[#171717]/20 text-[10px] text-[#171717] font-medium">
               <Tag className="w-2.5 h-2.5" />"{advFilters.itemName}"
               <button
                 onClick={() => setAdvFilters((p) => ({ ...p, itemName: "" }))}
@@ -1116,7 +1116,7 @@ export default function SalesPage({
             </span>
           )}
           {(advFilters.minPrice || advFilters.maxPrice) && (
-            <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#ff79c6]/10 border border-[#ff79c6]/20 text-[10px] text-[#ff79c6] font-medium">
+            <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#171717]/10 border border-[#171717]/20 text-[10px] text-[#171717] font-medium">
               <DollarSign className="w-2.5 h-2.5" />
               {advFilters.minPrice || "0"} – {advFilters.maxPrice || "∞"}
               <button
@@ -1130,7 +1130,7 @@ export default function SalesPage({
             </span>
           )}
           {advFilters.sheetId !== "all" && (
-            <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#ff79c6]/10 border border-[#ff79c6]/20 text-[10px] text-[#ff79c6] font-medium">
+            <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#171717]/10 border border-[#171717]/20 text-[10px] text-[#171717] font-medium">
               <FileText className="w-2.5 h-2.5" />
               {sheetMap.get(advFilters.sheetId) ?? "Sheet"}
               <button
@@ -1238,7 +1238,7 @@ export default function SalesPage({
           href="/record"
           className="flex items-center gap-2 px-5 py-3.5 rounded-2xl bg-[#171717] text-white text-sm font-semibold shadow-2xl shadow-black/25 hover:bg-[#171717]/90 active:scale-[0.97] transition-all duration-200"
         >
-          <div className="w-6 h-6 rounded-full bg-[#ff79c6] flex items-center justify-center shadow-sm shadow-[#ff79c6]/40">
+          <div className="w-6 h-6 rounded-full bg-[#171717] flex items-center justify-center shadow-sm shadow-[#171717]/40">
             <Mic className="w-3.5 h-3.5 text-white" />
           </div>
           Record a sale

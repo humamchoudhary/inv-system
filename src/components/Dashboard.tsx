@@ -221,8 +221,8 @@ const DATE_OPTIONS = [
 function Ambient() {
   return (
     <div className="fixed inset-0 pointer-events-none select-none z-0">
-      <div className="absolute top-[-10%] right-[-15%] w-[500px] h-[500px] rounded-full bg-[#ffb3d9] opacity-[0.13] blur-[130px]" />
-      <div className="absolute bottom-[-5%] left-[-10%] w-[360px] h-[360px] rounded-full bg-[#ff79c6] opacity-[0.08] blur-[110px]" />
+      <div className="absolute top-[-10%] right-[-15%] w-[500px] h-[500px] rounded-full bg-[#1e1e1e] opacity-[0.13] blur-[130px]" />
+      <div className="absolute bottom-[-5%] left-[-10%] w-[360px] h-[360px] rounded-full bg-[#171717] opacity-[0.08] blur-[110px]" />
     </div>
   );
 }
@@ -271,8 +271,8 @@ function TrendChart({
                   d.revenue === 0
                     ? "bg-[#f0f0f0]"
                     : isToday
-                      ? "bg-[#ff79c6]"
-                      : "bg-[#ffb3d9] group-hover:bg-[#ff79c6]"
+                      ? "bg-[#171717]"
+                      : "bg-[#1e1e1e] group-hover:bg-[#171717]"
                 }`}
                 style={{
                   height: `${Math.max(heightPct, d.revenue > 0 ? 4 : 2)}%`,
@@ -332,7 +332,7 @@ function KpiCard({
     <div
       className={`flex flex-col gap-1 px-4 py-3.5 rounded-2xl border transition-all duration-200 ${
         highlight
-          ? "bg-[#ff79c6]/5 border-[#ff79c6]/20"
+          ? "bg-[#171717]/5 border-[#171717]/20"
           : "bg-white border-[#f0f0f0]"
       }`}
     >
@@ -340,7 +340,7 @@ function KpiCard({
         {label}
       </p>
       <p
-        className={`text-xl font-bold tracking-tight tabular-nums ${highlight ? "text-[#ff79c6]" : "text-[#171717]"}`}
+        className={`text-xl font-bold tracking-tight tabular-nums ${highlight ? "text-[#171717]" : "text-[#171717]"}`}
       >
         {value}
       </p>
@@ -452,7 +452,7 @@ export default function DashboardClient({
         <div className="flex items-center gap-3">
           <a
             href="/"
-            className="flex items-center justify-center w-8 h-8 rounded-xl bg-[#f0f0f0] hover:bg-[#ffb3d9]/30 transition-colors duration-200"
+            className="flex items-center justify-center w-8 h-8 rounded-xl bg-[#f0f0f0] hover:bg-[#1e1e1e]/30 transition-colors duration-200"
           >
             <ChevronLeft className="w-4 h-4 text-[#171717]/60" />
           </a>
@@ -465,11 +465,11 @@ export default function DashboardClient({
         </div>
         <div className="flex items-center gap-2">
           {isPending && (
-            <div className="w-1.5 h-1.5 rounded-full bg-[#ff79c6] animate-pulse" />
+            <div className="w-1.5 h-1.5 rounded-full bg-[#171717] animate-pulse" />
           )}
           <a
             href="/record"
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#ff79c6] text-white text-xs font-semibold shadow-md shadow-[#ff79c6]/30 hover:bg-[#ff79c6]/90 active:scale-[0.97] transition-all duration-200"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#171717] text-white text-xs font-semibold shadow-md shadow-[#171717]/30 hover:bg-[#171717]/90 active:scale-[0.97] transition-all duration-200"
           >
             <Mic className="w-3.5 h-3.5" />
             Record
@@ -513,7 +513,7 @@ export default function DashboardClient({
                 className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold border transition-all duration-150 ${
                   activeSheet === "all"
                     ? "bg-[#171717] text-white border-[#171717]"
-                    : "bg-white text-[#171717]/50 border-[#f0f0f0] hover:border-[#ffb3d9]/50"
+                    : "bg-white text-[#171717]/50 border-[#f0f0f0] hover:border-[#1e1e1e]/50"
                 }`}
               >
                 <BarChart2 className="w-3 h-3" />
@@ -525,8 +525,8 @@ export default function DashboardClient({
                   onClick={() => navigate({ sheet: sheet.id })}
                   className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold border transition-all duration-150 ${
                     activeSheet === sheet.id
-                      ? "bg-[#ff79c6] text-white border-[#ff79c6] shadow-sm shadow-[#ff79c6]/25"
-                      : "bg-white text-[#171717]/50 border-[#f0f0f0] hover:border-[#ffb3d9]/50"
+                      ? "bg-[#171717] text-white border-[#171717] shadow-sm shadow-[#171717]/25"
+                      : "bg-white text-[#171717]/50 border-[#f0f0f0] hover:border-[#1e1e1e]/50"
                   }`}
                 >
                   <FileText className="w-3 h-3" />
@@ -543,8 +543,8 @@ export default function DashboardClient({
           style={{ animation: "fadeUp 0.4s 0.1s ease both" }}
         >
           {/* Glow */}
-          <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-[#ff79c6] opacity-20 blur-[60px] pointer-events-none" />
-          <div className="absolute -bottom-8 -left-8 w-32 h-32 rounded-full bg-[#ffb3d9] opacity-10 blur-[40px] pointer-events-none" />
+          <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-[#171717] opacity-20 blur-[60px] pointer-events-none" />
+          <div className="absolute -bottom-8 -left-8 w-32 h-32 rounded-full bg-[#1e1e1e] opacity-10 blur-[40px] pointer-events-none" />
           <div
             className="absolute inset-0 opacity-[0.03] pointer-events-none"
             style={{
@@ -623,11 +623,11 @@ export default function DashboardClient({
             </p>
             <div className="flex items-center gap-2">
               <span className="flex items-center gap-1 text-[10px] text-[#171717]/30">
-                <span className="w-2 h-2 rounded-sm bg-[#ff79c6] inline-block" />
+                <span className="w-2 h-2 rounded-sm bg-[#171717] inline-block" />
                 Today
               </span>
               <span className="flex items-center gap-1 text-[10px] text-[#171717]/30">
-                <span className="w-2 h-2 rounded-sm bg-[#ffb3d9] inline-block" />
+                <span className="w-2 h-2 rounded-sm bg-[#1e1e1e] inline-block" />
                 Other days
               </span>
             </div>
@@ -665,7 +665,7 @@ export default function DashboardClient({
                   <div className="flex items-center gap-2 mt-1">
                     <div className="h-1 flex-1 rounded-full bg-[#f0f0f0] overflow-hidden">
                       <div
-                        className="h-full rounded-full bg-gradient-to-r from-[#ff79c6] to-[#ffb3d9] transition-all duration-700"
+                        className="h-full rounded-full bg-gradient-to-r from-[#171717] to-[#1e1e1e] transition-all duration-700"
                         style={{ width: `${item.pct}%` }}
                       />
                     </div>
@@ -701,10 +701,10 @@ export default function DashboardClient({
             {insights.map((insight, i) => (
               <div
                 key={i}
-                className="flex items-start gap-3 px-4 py-3.5 rounded-2xl bg-[#fff5fb] border border-[#ffb3d9]/30"
+                className="flex items-start gap-3 px-4 py-3.5 rounded-2xl bg-[#] border border-[#1e1e1e]/30"
               >
-                <div className="w-7 h-7 rounded-xl bg-[#ff79c6]/15 flex items-center justify-center shrink-0 mt-0.5">
-                  <Lightbulb className="w-3.5 h-3.5 text-[#ff79c6]" />
+                <div className="w-7 h-7 rounded-xl bg-[#171717]/15 flex items-center justify-center shrink-0 mt-0.5">
+                  <Lightbulb className="w-3.5 h-3.5 text-[#171717]" />
                 </div>
                 <p className="text-sm text-[#171717]/70 leading-relaxed">
                   {insight}
@@ -733,7 +733,7 @@ export default function DashboardClient({
             </div>
             <a
               href="/record"
-              className="flex items-center gap-2 px-5 py-3 rounded-xl bg-[#ff79c6] text-white text-sm font-semibold shadow-lg shadow-[#ff79c6]/25 hover:bg-[#ff79c6]/90 active:scale-[0.97] transition-all duration-200"
+              className="flex items-center gap-2 px-5 py-3 rounded-xl bg-[#171717] text-white text-sm font-semibold shadow-lg shadow-[#171717]/25 hover:bg-[#171717]/90 active:scale-[0.97] transition-all duration-200"
             >
               <Mic className="w-4 h-4" />
               Record a sale
@@ -748,7 +748,7 @@ export default function DashboardClient({
           href="/record"
           className="flex items-center gap-2 px-5 py-3.5 rounded-2xl bg-[#171717] text-white text-sm font-semibold shadow-2xl shadow-black/25 hover:bg-[#171717]/90 active:scale-[0.97] transition-all duration-200"
         >
-          <div className="w-6 h-6 rounded-full bg-[#ff79c6] flex items-center justify-center shadow-sm shadow-[#ff79c6]/40">
+          <div className="w-6 h-6 rounded-full bg-[#171717] flex items-center justify-center shadow-sm shadow-[#171717]/40">
             <Mic className="w-3.5 h-3.5 text-white" />
           </div>
           Record a sale

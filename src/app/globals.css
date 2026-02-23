@@ -4,8 +4,8 @@
   --background: #ffffff;
   --background-sec: #f0f0f0;
   --foreground: #171717;
-  --primary: #ff79c6;
-  --primary-sec: #ffb3d9; /* lighter/shaded primary */
+  --primary: #171717;
+  --primary-sec: #1e1e1e; /* lighter/shaded primary */
 }
 
 @theme {

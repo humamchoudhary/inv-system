@@ -53,7 +53,7 @@ function RedirectBar({
   return (
     <div className="w-full h-1 rounded-full bg-[#f0f0f0] overflow-hidden">
       <div
-        className="h-full rounded-full bg-[#ff79c6] transition-none"
+        className="h-full rounded-full bg-[#171717] transition-none"
         style={{ width: `${progress}%` }}
       />
     </div>
@@ -65,11 +65,11 @@ function Checkmark() {
   return (
     <div className="relative flex items-center justify-center w-20 h-20">
       <span
-        className="absolute inset-0 rounded-full bg-[#ff79c6]/10 animate-ping"
+        className="absolute inset-0 rounded-full bg-[#171717]/10 animate-ping"
         style={{ animationDuration: "1.4s" }}
       />
-      <span className="absolute inset-2 rounded-full bg-[#ff79c6]/10" />
-      <div className="relative w-16 h-16 rounded-full bg-[#ff79c6] shadow-xl shadow-[#ff79c6]/40 flex items-center justify-center">
+      <span className="absolute inset-2 rounded-full bg-[#171717]/10" />
+      <div className="relative w-16 h-16 rounded-full bg-[#171717] shadow-xl shadow-[#171717]/40 flex items-center justify-center">
         <svg viewBox="0 0 40 40" fill="none" className="w-8 h-8">
           <path
             d="M10 20.5l7 7 13-14"
@@ -103,7 +103,7 @@ function Field({
     <div className="flex flex-col gap-1.5">
       <label className="text-xs font-medium text-[#171717]/60 uppercase tracking-wider flex items-center gap-1">
         {label}
-        {required && <span className="text-[#ff79c6]">*</span>}
+        {required && <span className="text-[#171717]">*</span>}
       </label>
       {children}
       {error && (
@@ -120,13 +120,13 @@ function Field({
 function Ambient() {
   return (
     <div className="fixed inset-0 pointer-events-none">
-      <div className="absolute -top-32 -right-32 w-[500px] h-[500px] rounded-full bg-[#ffb3d9] opacity-20 blur-[130px]" />
-      <div className="absolute -bottom-20 -left-20 w-[360px] h-[360px] rounded-full bg-[#ff79c6] opacity-10 blur-[100px]" />
+      <div className="absolute -top-32 -right-32 w-[500px] h-[500px] rounded-full bg-[#1e1e1e] opacity-20 blur-[130px]" />
+      <div className="absolute -bottom-20 -left-20 w-[360px] h-[360px] rounded-full bg-[#171717] opacity-10 blur-[100px]" />
       <div
         className="absolute inset-0 opacity-[0.025]"
         style={{
           backgroundImage:
-            "linear-gradient(#ff79c6 1px, transparent 1px), linear-gradient(90deg, #ff79c6 1px, transparent 1px)",
+            "linear-gradient(#171717 1px, transparent 1px), linear-gradient(90deg, #171717 1px, transparent 1px)",
           backgroundSize: "40px 40px",
         }}
       />
@@ -210,7 +210,7 @@ export default function CreateBusinessPage() {
 
   const inputBase =
     "w-full px-4 py-3 rounded-xl border bg-[#f0f0f0]/50 text-[#171717] placeholder:text-[#171717]/30 text-sm outline-none transition-all duration-200";
-  const inputNormal = `${inputBase} border-[#f0f0f0] focus:border-[#ff79c6] focus:bg-white focus:ring-2 focus:ring-[#ff79c6]/20`;
+  const inputNormal = `${inputBase} border-[#f0f0f0] focus:border-[#171717] focus:bg-white focus:ring-2 focus:ring-[#171717]/20`;
   const inputErr = `${inputBase} border-red-300 focus:border-red-400 focus:ring-2 focus:ring-red-100 bg-red-50/30`;
 
   // ── READY STATE ──────────────────────────────────────────────────────────────
@@ -228,7 +228,7 @@ export default function CreateBusinessPage() {
             className="flex flex-col gap-2"
             style={{ animation: "fadeUp 0.4s 0.2s ease both" }}
           >
-            <p className="text-xs font-medium text-[#ff79c6] uppercase tracking-widest">
+            <p className="text-xs font-medium text-[#171717] uppercase tracking-widest">
               All set
             </p>
             <h1 className="text-2xl font-semibold tracking-tight text-[#171717]">
@@ -286,7 +286,7 @@ export default function CreateBusinessPage() {
         {/* Back */}
         <a
           href="/welcome"
-          className="inline-flex items-center gap-1 text-xs text-[#171717]/40 hover:text-[#ff79c6] transition-colors mb-8 group"
+          className="inline-flex items-center gap-1 text-xs text-[#171717]/40 hover:text-[#171717] transition-colors mb-8 group"
           style={{ animation: "fadeUp 0.4s ease both" }}
         >
           <ChevronLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform duration-150" />
@@ -299,7 +299,7 @@ export default function CreateBusinessPage() {
           style={{ animation: "fadeUp 0.4s 0.05s ease both" }}
         >
           <div className="flex items-center gap-2 mb-1">
-            <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-[#ff79c6] shadow-md shadow-[#ff79c6]/30">
+            <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-[#171717] shadow-md shadow-[#171717]/30">
               <BrainCog className="w-4 h-4 text-white" />
             </div>
             <span className="text-xs font-medium text-[#171717]/40 uppercase tracking-widest">
@@ -418,7 +418,7 @@ export default function CreateBusinessPage() {
             <button
               type="submit"
               disabled={isPending}
-              className="group relative mt-1 w-full py-3.5 rounded-xl bg-[#ff79c6] hover:bg-[#ff79c6]/90 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed disabled:active:scale-100 text-white text-sm font-semibold tracking-wide shadow-lg shadow-[#ff79c6]/30 transition-all duration-200 overflow-hidden flex items-center justify-center gap-2"
+              className="group relative mt-1 w-full py-3.5 rounded-xl bg-[#171717] hover:bg-[#171717]/90 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed disabled:active:scale-100 text-white text-sm font-semibold tracking-wide shadow-lg shadow-[#171717]/30 transition-all duration-200 overflow-hidden flex items-center justify-center gap-2"
             >
               <span className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
               <span className="relative flex items-center gap-2">

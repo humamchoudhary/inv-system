@@ -25,15 +25,15 @@ export default function WelcomePage() {
       {/* ── Ambient background ── */}
       <div className="fixed inset-0 pointer-events-none select-none">
         {/* Large soft glow — top right */}
-        <div className="absolute -top-32 -right-32 w-[560px] h-[560px] rounded-full bg-[#ffb3d9] opacity-[0.18] blur-[140px]" />
+        <div className="absolute -top-32 -right-32 w-[560px] h-[560px] rounded-full bg-[#1e1e1e] opacity-[0.18] blur-[140px]" />
         {/* Smaller tight glow — bottom left */}
-        <div className="absolute -bottom-24 -left-24 w-[360px] h-[360px] rounded-full bg-[#ff79c6] opacity-[0.12] blur-[100px]" />
+        <div className="absolute -bottom-24 -left-24 w-[360px] h-[360px] rounded-full bg-[#171717] opacity-[0.12] blur-[100px]" />
         {/* Faint grid overlay */}
         <div
           className="absolute inset-0 opacity-[0.025]"
           style={{
             backgroundImage:
-              "linear-gradient(#ff79c6 1px, transparent 1px), linear-gradient(90deg, #ff79c6 1px, transparent 1px)",
+              "linear-gradient(#171717 1px, transparent 1px), linear-gradient(90deg, #171717 1px, transparent 1px)",
             backgroundSize: "40px 40px",
           }}
         />
@@ -46,7 +46,7 @@ export default function WelcomePage() {
           className="flex items-center gap-2.5 mb-16"
           style={{ animation: "fadeUp 0.5s ease both" }}
         >
-          <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-[#ff79c6] shadow-lg shadow-[#ff79c6]/30">
+          <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-[#171717] shadow-lg shadow-[#171717]/30">
             <BrainCog className="w-5 h-5 text-white" />
           </div>
           <span className="text-[18px] font-semibold tracking-tight text-[#171717]">
@@ -62,7 +62,7 @@ export default function WelcomePage() {
           <h1 className="text-[28px] font-semibold tracking-tight text-[#171717] leading-snug">
             Let&apos;s set up your
             <br />
-            <span className="text-[#ff79c6]">first business.</span>
+            <span className="text-[#171717]">first business.</span>
           </h1>
           <p className="text-sm text-[#171717]/40 mt-2">
             Here&apos;s what you&apos;ll be able to do.
@@ -74,7 +74,7 @@ export default function WelcomePage() {
           {features.map((f, i) => (
             <div
               key={f.title}
-              className="flex items-center gap-4 px-5 py-4 rounded-2xl bg-[#f0f0f0]/60 border border-[#f0f0f0] hover:border-[#ffb3d9] hover:bg-[#fff5fb] transition-all duration-200"
+              className="flex items-center gap-4 px-5 py-4 rounded-2xl bg-[#f0f0f0]/60 border border-[#f0f0f0] hover:border-[#1e1e1e] hover:bg-[#] transition-all duration-200"
               style={{ animation: `fadeUp 0.5s ${0.2 + i * 0.1}s ease both` }}
             >
               {/* Icon bubble */}
@@ -89,11 +89,11 @@ export default function WelcomePage() {
                 <p className="text-xs text-[#171717]/40 mt-0.5">{f.sub}</p>
               </div>
               {/* Tick */}
-              <div className="ml-auto flex-shrink-0 w-5 h-5 rounded-full bg-[#ff79c6]/10 flex items-center justify-center">
+              <div className="ml-auto flex-shrink-0 w-5 h-5 rounded-full bg-[#171717]/10 flex items-center justify-center">
                 <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
                   <path
                     d="M2 5l2.5 2.5 4-4"
-                    stroke="#ff79c6"
+                    stroke="#171717"
                     strokeWidth="1.5"
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -109,7 +109,7 @@ export default function WelcomePage() {
           className="w-full"
           style={{ animation: "fadeUp 0.5s 0.55s ease both" }}
         >
-          <div className="group relative w-full py-3.5 rounded-2xl bg-[#ff79c6] hover:bg-[#ff79c6]/90 active:scale-[0.98] text-white text-sm font-semibold tracking-wide shadow-xl shadow-[#ff79c6]/30 transition-all duration-200 overflow-hidden">
+          <div className="group relative w-full py-3.5 rounded-2xl bg-[#171717] hover:bg-[#171717]/90 active:scale-[0.98] text-white text-sm font-semibold tracking-wide shadow-xl shadow-[#171717]/30 transition-all duration-200 overflow-hidden">
             <Link href={"/onboarding/"}>
               {/* Shimmer sweep on hover */}
               <span className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 bg-gradient-to-r from-transparent via-white/20 to-transparent" />

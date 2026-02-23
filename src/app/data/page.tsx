@@ -580,7 +580,7 @@ export default function SalesPage() {
       const margin = 15;
 
       // Convert hex color to RGB for jsPDF
-      const pinkColor = [255, 121, 198]; // #ff79c6
+      const pinkColor = [255, 121, 198]; // #171717
 
       // Add title and date range
       doc.setFontSize(24);
@@ -686,7 +686,7 @@ export default function SalesPage() {
         body: productData,
         theme: "striped",
         headStyles: {
-          fillColor: "#ff79c6",
+          fillColor: "#171717",
           textColor: [255, 255, 255],
           fontSize: 11,
           fontStyle: "bold",
@@ -766,7 +766,7 @@ export default function SalesPage() {
         body: tableData,
         theme: "grid",
         headStyles: {
-          fillColor: "#ff79c6",
+          fillColor: "#171717",
           textColor: [255, 255, 255],
           fontSize: 10,
           fontStyle: "bold",
