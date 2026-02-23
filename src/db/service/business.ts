@@ -30,7 +30,7 @@ export async function createBusiness(
 
 export async function getUserActiveBusiness(user_id: string) {
   const user = await getUser(user_id);
-  if (user!.last_business) {
+  if (user && user!.last_business) {
     return await db.query.business.findFirst({
       where: and(
         eq(business.id, user!.last_business),

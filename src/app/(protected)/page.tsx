@@ -20,6 +20,7 @@ export default async function Index() {
   }
 
   const business = await getUserActiveBusiness(session.user.id);
+  console.log(business);
   if (!business) {
     redirect("/welcome");
   }

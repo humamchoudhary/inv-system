@@ -259,7 +259,7 @@ export default function CreateBusinessPage() {
             <p className="text-xs text-[#171717]/30 text-center">
               Redirecting…
             </p>
-            <RedirectBar onComplete={() => router.push("/dashboard")} />
+            <RedirectBar onComplete={() => router.push("/")} />
           </div>
         </div>
 
