@@ -854,33 +854,33 @@ export default function SalesClient({
         className="relative z-10 px-5 mt-4 flex flex-col gap-3"
         style={{ animation: "fadeUp 0.4s 0.1s ease both" }}
       >
-        {/* Row 1: date pills + filter button + view toggle */}
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Date pills */}
-          <div className="flex gap-1.5 flex-1 overflow-x-auto scrollbar-hide min-w-0">
-            {DATE_OPTIONS.map((f) => {
-              const hasCustomDate = !!(dateFrom || dateTo);
-              const active = !hasCustomDate && dateFilter === f.value;
-              return (
-                <button
-                  key={f.value}
-                  onClick={() =>
-                    navigate({ date: f.value, dateFrom: "", dateTo: "" })
-                  }
-                  className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-150 ${active ? "bg-[#171717] text-white" : "bg-[#f0f0f0]/70 text-[#171717]/50 hover:text-[#171717]/70"}`}
-                >
-                  {f.label}
-                </button>
-              );
-            })}
-            {(dateFrom || dateTo) && (
-              <span className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium bg-[#171717]/10 text-[#171717] border border-[#171717]/20">
-                <CalendarDays className="w-3 h-3" />
-                Custom range
-              </span>
-            )}
-          </div>
+        {/* Row 1: date pills — full-width scrollable row */}
+        <div className="flex gap-1.5 overflow-x-auto scrollbar-hide -mx-5 px-5">
+          {DATE_OPTIONS.map((f) => {
+            const hasCustomDate = !!(dateFrom || dateTo);
+            const active = !hasCustomDate && dateFilter === f.value;
+            return (
+              <button
+                key={f.value}
+                onClick={() =>
+                  navigate({ date: f.value, dateFrom: "", dateTo: "" })
+                }
+                className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-150 ${active ? "bg-[#171717] text-white" : "bg-[#f0f0f0]/70 text-[#171717]/50 hover:text-[#171717]/70"}`}
+              >
+                {f.label}
+              </button>
+            );
+          })}
+          {(dateFrom || dateTo) && (
+            <span className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium bg-[#171717]/10 text-[#171717] border border-[#171717]/20">
+              <CalendarDays className="w-3 h-3" />
+              Custom range
+            </span>
+          )}
+        </div>
 
+        {/* Row 2: filter button + view toggle */}
+        <div className="flex items-center justify-between gap-2">
           {/* Filter toggle */}
           <button
             onClick={() => setShowFilters((v) => !v)}
@@ -990,7 +990,7 @@ export default function SalesClient({
                 <label className="flex items-center gap-1.5 text-[10px] font-semibold text-[#171717]/40 uppercase tracking-wider mb-2">
                   <CalendarDays className="w-3 h-3" /> Custom date range
                 </label>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center md:flex-nowrap flex-wrap gap-2 justify-center">
                   <input
                     type="date"
                     value={draftDateFrom}

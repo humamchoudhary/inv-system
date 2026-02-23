@@ -1,20 +1,20 @@
-import { BrainCog } from "lucide-react";
+import { BrainCog, Mic, Package, BarChart2 } from "lucide-react";
 import Link from "next/link";
 
 export default function WelcomePage() {
   const features = [
     {
-      icon: "🎙",
+      icon: Mic,
       title: "Record daily sales",
       sub: "using voice",
     },
     {
-      icon: "📦",
+      icon: Package,
       title: "Inventory updates",
       sub: "automatically",
     },
     {
-      icon: "📊",
+      icon: BarChart2,
       title: "Track performance",
       sub: "over time",
     },
@@ -71,37 +71,43 @@ export default function WelcomePage() {
 
         {/* ── Value statements ── */}
         <div className="w-full flex flex-col gap-3 mb-12">
-          {features.map((f, i) => (
-            <div
-              key={f.title}
-              className="flex items-center gap-4 px-5 py-4 rounded-2xl bg-[#f0f0f0]/60 border border-[#f0f0f0] hover:border-[#1e1e1e] hover:bg-[#] transition-all duration-200"
-              style={{ animation: `fadeUp 0.5s ${0.2 + i * 0.1}s ease both` }}
-            >
-              {/* Icon bubble */}
-              <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-white border border-[#f0f0f0] flex items-center justify-center text-lg shadow-sm">
-                {f.icon}
-              </div>
-              {/* Text */}
-              <div>
-                <p className="text-sm font-medium text-[#171717] leading-tight">
-                  {f.title}
-                </p>
-                <p className="text-xs text-[#171717]/40 mt-0.5">{f.sub}</p>
-              </div>
-              {/* Tick */}
-              <div className="ml-auto flex-shrink-0 w-5 h-5 rounded-full bg-[#171717]/10 flex items-center justify-center">
-                <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                  <path
-                    d="M2 5l2.5 2.5 4-4"
-                    stroke="#171717"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
+          {features.map((f, i) => {
+            const Icon = f.icon;
+            return (
+              <div
+                key={f.title}
+                className="flex items-center gap-4 px-5 py-4 rounded-2xl bg-[#f0f0f0]/60 border border-[#f0f0f0] hover:border-[#1e1e1e] transition-all duration-200"
+                style={{ animation: `fadeUp 0.5s ${0.2 + i * 0.1}s ease both` }}
+              >
+                {/* Icon bubble */}
+                <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-white border border-[#f0f0f0] flex items-center justify-center shadow-sm">
+                  <Icon
+                    className="w-4.5 h-4.5 text-[#171717]/70"
+                    style={{ width: "18px", height: "18px" }}
                   />
-                </svg>
+                </div>
+                {/* Text */}
+                <div>
+                  <p className="text-sm font-medium text-[#171717] leading-tight">
+                    {f.title}
+                  </p>
+                  <p className="text-xs text-[#171717]/40 mt-0.5">{f.sub}</p>
+                </div>
+                {/* Tick */}
+                <div className="ml-auto flex-shrink-0 w-5 h-5 rounded-full bg-[#171717]/10 flex items-center justify-center">
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                    <path
+                      d="M2 5l2.5 2.5 4-4"
+                      stroke="#171717"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* ── CTA ── */}
