@@ -15,6 +15,7 @@ export default async function Index() {
   if (!session) {
     redirect("/signin");
   }
+  console.log(session);
   if (session.user.first_auth) {
     redirect("/welcome");
   }
