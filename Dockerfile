@@ -29,10 +29,10 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
 
-ARG GEMINI_API_KEY
-ENV GEMINI_API_KEY=$GEMINI_API_KEY
+# ARG GEMINI_API_KEY
+# ENV GEMINI_API_KEY=$GEMINI_API_KEY
 # Default port (can be overridden at runtime)
-ENV PORT=3000
+ENV PORT=6003
 ENV HOSTNAME="0.0.0.0"
 
 # Create non-root user for security
