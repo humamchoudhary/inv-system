@@ -13,7 +13,7 @@ export async function createBusinessAction(
 
   const session = await auth();
   if (session && session?.user) {
-    createBusiness(name, business_type, currency, session.user.id);
+    await createBusiness(name, business_type, currency, session.user.id);
     await unstable_update({
       user: { first_auth: false },
     });
