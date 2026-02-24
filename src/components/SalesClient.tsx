@@ -36,7 +36,9 @@ import {
   Tag,
   DollarSign,
   Loader2,
+  Download,
 } from "lucide-react";
+import * as XLSX from "xlsx";
 
 // ─────────────────────────────────────────────
 // Types
@@ -134,7 +136,6 @@ function formatDate(date: Date | null) {
 function groupIntoSessions(sales: SaleEntry[]): TranscriptionGroup[] {
   const grouped = new Map<string, TranscriptionGroup>();
   for (const sale of sales) {
-    // Group by transcriptionId if available, else by minute
     const key = sale.transcriptionId
       ? sale.transcriptionId
       : sale.createdAt
@@ -204,6 +205,12 @@ function buildUrl(
   }
   return `/sales?${params.toString()}`;
 }
+
+// ─────────────────────────────────────────────
+// Export helper
+// ─────────────────────────────────────────────
+
+// ── Export ──
 
 // ─────────────────────────────────────────────
 // Sub-components
@@ -678,6 +685,57 @@ export default function SalesClient({
     () => new Map(sheets.map((s) => [s.id, s.name])),
     [sheets],
   );
+  const exportToExcel = useCallback(() => {
+    const wb = XLSX.utils.book_new();
+
+    // Group localSales by sheetId
+    const bySheet = new Map<string, SaleEntry[]>();
+
+    if (activeSheet === "all") {
+      // One xlsx-sheet per sale-sheet
+      for (const sheet of sheets) {
+        bySheet.set(sheet.id, []);
+      }
+      for (const sale of localSales) {
+        if (!bySheet.has(sale.sheetId)) bySheet.set(sale.sheetId, []);
+        bySheet.get(sale.sheetId)!.push(sale);
+      }
+    } else {
+      bySheet.set(activeSheet, localSales);
+    }
+
+    for (const [sheetId, entries] of bySheet.entries()) {
+      const sheetName = sheetMap.get(sheetId) ?? sheetId.slice(0, 8);
+      const rows = entries.map((s) => ({
+        // ID: s.id,
+        "Item Name": s.name,
+        Price: s.price,
+        Date: s.createdAt ? new Date(s.createdAt).toLocaleDateString() : "",
+        // Time: s.createdAt ? new Date(s.createdAt).toLocaleTimeString() : "",
+        Transcription: s.transcriptionText ?? "",
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(rows);
+
+      // Auto column widths
+      const colWidths = [
+        // { wch: 36 }, // ID
+        { wch: 28 }, // Item Name
+        { wch: 12 }, // Price
+        { wch: 14 }, // Date
+        // { wch: 12 }, // Time
+        { wch: 50 }, // Transcription
+      ];
+      ws["!cols"] = colWidths;
+
+      // Sanitise sheet name (Excel limit: 31 chars, no special chars)
+      const safeName = sheetName.replace(/[:\\/?*[\]]/g, "").slice(0, 31);
+      XLSX.utils.book_append_sheet(wb, ws, safeName || "Sheet");
+    }
+
+    const dateTag = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, `sales-export-${dateTag}.xlsx`);
+  }, [localSales, activeSheet, sheets, sheetMap]);
 
   // ── Mutations ──
   const handleUpdateItem = useCallback(
@@ -756,6 +814,18 @@ export default function SalesClient({
           {isPending && (
             <Loader2 className="w-4 h-4 text-[#171717] animate-spin" />
           )}
+
+          {/* Export button */}
+          <button
+            onClick={() => exportToExcel()}
+            disabled={localSales.length === 0}
+            title={`Export ${localSales.length} sale${localSales.length !== 1 ? "s" : ""} to Excel`}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-[#f0f0f0] bg-white text-[#171717]/60 text-xs font-semibold hover:border-[#171717]/30 hover:text-[#171717] hover:bg-[#f0f0f0]/50 active:scale-[0.97] disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200"
+          >
+            <Download className="w-3.5 h-3.5" />
+            Export
+          </button>
+
           <a
             href="/record"
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#171717] text-white text-xs font-semibold shadow-md shadow-[#171717]/30 hover:bg-[#171717]/90 active:scale-[0.97] transition-all duration-200"

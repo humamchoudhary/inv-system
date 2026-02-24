@@ -10,25 +10,26 @@ interface SaleItem {
 }
 
 export const createEntry = async (data: {
-  items: SaleItem[]; // <- fixed type
+  items: SaleItem[];
   transcription: string;
   sheetId: string;
+  date?: string; // ISO string
 }) => {
-  // Insert transcription first
+  const saleDate = data.date ? new Date(data.date) : new Date();
+
   const [insertedTranscription] = await db
     .insert(transcription)
-    .values({ text: data.transcription })
+    .values({ text: data.transcription, createdAt: saleDate })
     .returning();
 
-  // Add extra fields to each sales row
   const salesWithExtras = data.items.map((entry) => ({
     ...entry,
     price: entry.price.toString(),
     transcription_id: insertedTranscription.id,
     sheet_id: data.sheetId,
+    createdAt: saleDate,
   }));
 
-  // Insert all sales at once
   return await db.insert(sales).values(salesWithExtras).returning();
 };
 

@@ -13,7 +13,13 @@ const outputSchema = z.object({
   transcription: z
     .string()
     .describe("Transcription of the audio without sound effects"),
-
+  date: z
+    .string()
+    .nullable()
+    .optional()
+    .describe(
+      "Date mentioned in the audio (ISO 8601 format), or null if not mentioned",
+    ),
   data: z
     .array(
       z.object({
@@ -93,7 +99,10 @@ export async function POST(req: NextRequest) {
           parts: [
             {
               text: `
-Transcribe the audio and extract sold items with prices. if there are any calculations needed do those too,
+Transcribe the audio and extract sold items with prices. If there are any calculations needed do those too.
+If the speaker mentions a specific date (e.g. "yesterday", "last Monday", "3rd of this month"), resolve it to an ISO 8601 date string (YYYY-MM-DD). Otherwise set date to null. 
+also if the user lists multiple items then give list of prices make it so the prices are mapped respectively, 
+also if user doesnt give any price return price as 0, and in case user doesnt give a item but tells a price then name it as unnamed
 Return strictly valid JSON matching the provided schema.
 `,
             },
@@ -119,10 +128,16 @@ Return strictly valid JSON matching the provided schema.
     // ── Runtime validation + typed result ─────
     const parsed: OutputSchema = outputSchema.parse(JSON.parse(response.text));
 
+    const resolvedDate = parsed.date
+      ? new Date(parsed.date).toISOString()
+      : new Date().toISOString();
+
     return NextResponse.json({
       error: false,
       message: "",
-      ...parsed,
+      transcription: parsed.transcription,
+      date: resolvedDate,
+      data: parsed.data,
     });
   } catch (err) {
     console.error("[process-recording]", err);

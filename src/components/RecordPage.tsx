@@ -41,6 +41,7 @@ interface ApiResponse {
   transcription: string;
   error: boolean;
   message?: string;
+  date: string;
 }
 
 interface RecordPageProps {
@@ -51,6 +52,7 @@ interface RecordPageProps {
     items: SaleItem[];
     transcription: string;
     sheetId: string;
+    date?: string;
   }) => Promise<void>;
 }
 
@@ -189,6 +191,7 @@ export default function RecordPage({
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
 
+  const [recordingDate, setRecordingDate] = useState<string>("");
   // ── Auto-focus sheet input ──
   useEffect(() => {
     if (pageState === "sheet-create")
@@ -312,7 +315,12 @@ export default function RecordPage({
       }
 
       // Map API data → local items with stable ids
+      // In processAudio, update how you store the response:
+      const resolvedDate = json.date ?? new Date().toISOString();
+
       setTranscription(json.transcription);
+      setRecordingDate(resolvedDate); // add this state
+
       setItems(
         json.data.map((d) => ({
           id: crypto.randomUUID(),
@@ -360,7 +368,12 @@ export default function RecordPage({
     setSaveError("");
     setIsSaving(true);
     try {
-      await onSave({ items, transcription, sheetId: selectedSheet.id });
+      await onSave({
+        items,
+        transcription,
+        sheetId: selectedSheet.id,
+        date: recordingDate || new Date().toISOString(), // 👈 add this
+      });
       setPageState("success");
     } catch {
       setSaveError("Failed to save. Please try again.");
@@ -378,6 +391,7 @@ export default function RecordPage({
     setTranscription("");
     setProcessingError("");
     setSaveError("");
+    setRecordingDate("");
     setPageState(hasSheets ? "sheet-select" : "sheet-create");
   };
 
@@ -386,6 +400,7 @@ export default function RecordPage({
     setItems([]);
     setTranscription("");
     setDuration(0);
+    setRecordingDate("");
     audioChunksRef.current = [];
     startMic(selectedSheet);
   };
@@ -865,6 +880,48 @@ export default function RecordPage({
             </div>
           </div>
 
+          {/* Date */}
+          <div
+            className="flex flex-col gap-2"
+            style={{ animation: "fadeUp 0.4s 0.03s ease both" }}
+          >
+            <p className="text-[10px] font-medium text-[#171717]/30 uppercase tracking-widest">
+              Sale Date
+            </p>
+            <div className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-[#f0f0f0]/60 border border-[#f0f0f0]">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                className="shrink-0 text-[#171717]/40"
+              >
+                <rect
+                  x="3"
+                  y="4"
+                  width="18"
+                  height="18"
+                  rx="2"
+                  stroke="currentColor"
+                  strokeWidth="1.75"
+                />
+                <path
+                  d="M3 9h18M8 2v4M16 2v4"
+                  stroke="currentColor"
+                  strokeWidth="1.75"
+                  strokeLinecap="round"
+                />
+              </svg>
+              <input
+                type="date"
+                value={recordingDate ? recordingDate.slice(0, 10) : ""}
+                onChange={(e) =>
+                  setRecordingDate(new Date(e.target.value).toISOString())
+                }
+                className="flex-1 bg-transparent text-sm text-[#171717] outline-none"
+              />
+            </div>
+          </div>
           {/* Items table */}
           <div
             className="flex flex-col gap-2"
