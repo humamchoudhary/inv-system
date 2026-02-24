@@ -582,6 +582,8 @@ export default function SalesClient({
   totalRevenue,
   totalItems,
 }: SalesClientProps) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 

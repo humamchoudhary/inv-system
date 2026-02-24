@@ -13,11 +13,14 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 COPY --from=deps /app/node_modules ./node_modules
+RUN apk add --no-cache icu-data-full tzdata
 COPY . .
-
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_OPTIONS="--max-old-space-size=4096"
 
+
+ENV LANG=en_US.UTF-8
+ENV LC_ALL=en_US.UTF-8
 # Build the application
 RUN npm run build
 
@@ -27,6 +30,7 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+RUN apk add --no-cache icu-data-full tzdata libc6-compat
 
 
 # ARG GEMINI_API_KEY
@@ -34,6 +38,9 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # Default port (can be overridden at runtime)
 ENV PORT=6003
 ENV HOSTNAME="0.0.0.0"
+ENV LANG=en_US.UTF-8
+ENV LC_ALL=en_US.UTF-8
+
 
 # Create non-root user for security
 RUN addgroup --system --gid 1001 nextjs

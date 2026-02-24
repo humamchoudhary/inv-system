@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   BrainCog,
@@ -290,7 +290,18 @@ export default function HomePage({
   snapshot = { totalSales: 0, itemsSold: 0 },
 }: HomePageProps) {
   const router = useRouter();
-  const today = getTodayLabel();
+  const [today, setToday] = useState("");
+
+  useEffect(() => {
+    setToday(
+      new Date().toLocaleDateString("en-US", {
+        weekday: "long",
+        month: "short",
+        day: "numeric",
+      }),
+    );
+  }, []);
+
   const [switcherOpen, setSwitcherOpen] = useState(false);
 
   // Switcher only makes sense with 2+ businesses
