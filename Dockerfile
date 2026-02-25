@@ -30,7 +30,15 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN apk add --no-cache icu-data-full tzdata libc6-compat
+# RUN apk add --no-cache icu-data-full tzdata libc6-compat
+
+RUN apt-get update && apt-get install -y locales && rm -rf /var/lib/apt/lists/* \
+    && locale-gen "es_US.UTF-8"
+
+# Set the environment variables for Spanish (Spain)
+ENV LANG es_US.UTF-8
+ENV LANGUAGE es_US:us
+ENV LC_ALL es_US.UTF-8
 
 
 # ARG GEMINI_API_KEY
@@ -38,8 +46,8 @@ RUN apk add --no-cache icu-data-full tzdata libc6-compat
 # Default port (can be overridden at runtime)
 ENV PORT=6003
 ENV HOSTNAME="0.0.0.0"
-ENV LANG=en_US.UTF-8
-ENV LC_ALL=en_US.UTF-8
+# ENV LANG=en_US.UTF-8
+# ENV LC_ALL=en_US.UTF-8
 
 
 # Create non-root user for security
