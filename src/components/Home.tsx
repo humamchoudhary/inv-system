@@ -36,13 +36,13 @@ interface HomePageProps {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-function getTodayLabel() {
-  return new Date().toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "short",
-    day: "numeric",
-  });
-}
+// function getTodayLabel() {
+//   return new Date().toLocaleDateString("en-US", {
+//     weekday: "long",
+//     month: "short",
+//     day: "numeric",
+//   });
+// }
 
 function formatCurrency(amount: number, currencyCode: string) {
   try {
@@ -290,7 +290,8 @@ export default function HomePage({
   snapshot = { totalSales: 0, itemsSold: 0 },
 }: HomePageProps) {
   const router = useRouter();
-  const [today, setToday] = useState("");
+
+  const [today, setToday] = useState<string | null>(null);
 
   useEffect(() => {
     setToday(
@@ -339,7 +340,8 @@ export default function HomePage({
               </h1>
             </div>
           )}
-          <p className="text-xs text-[#171717]/40 pl-4">{today}</p>
+
+          {today && <p className="text-xs text-[#171717]/40 pl-4">{today}</p>}
         </div>
 
         <a

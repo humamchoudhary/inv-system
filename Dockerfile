@@ -1,16 +1,15 @@
 # ---------- Base (shared locale/system config) ----------
 FROM node:20-alpine AS base
-RUN apk add --no-cache \
-        musl-locales \
-        musl-locales-lang \
-        icu-data-full \
+# RUN apk add --no-cache \
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        locales \
         tzdata \
-        libc6-compat && \
-    echo 'export LC_ALL=en_US.UTF-8' >> /etc/profile.d/locale.sh && \
-    sed -i 's|LANG=en_US.UTF-8|LANG=en_US.UTF-8|' /etc/profile.d/locale.sh
+    && sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen \
+    && locale-gen \
+    && rm -rf /var/lib/apt/lists/*
 
 ENV LANG=en_US.UTF-8 \
-    LANGUAGE=en_US:us \
+    LANGUAGE=en_US:en \
     LC_ALL=en_US.UTF-8 \
     TZ=UTC \
     NEXT_TELEMETRY_DISABLED=1

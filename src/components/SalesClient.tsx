@@ -122,16 +122,16 @@ function formatTime(date: Date | null) {
   });
 }
 
-function formatDate(date: Date | null) {
-  if (!date) return "";
-  const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setDate(today.getDate() - 1);
-  const d = new Date(date);
-  if (d.toDateString() === today.toDateString()) return "Today";
-  if (d.toDateString() === yesterday.toDateString()) return "Yesterday";
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
+// function formatDate(date: Date | null) {
+//   if (!date) return "";
+//   const today = new Date();
+//   const yesterday = new Date(today);
+//   yesterday.setDate(today.getDate() - 1);
+//   const d = new Date(date);
+//   if (d.toDateString() === today.toDateString()) return "Today";
+//   if (d.toDateString() === yesterday.toDateString()) return "Yesterday";
+//   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+// }
 
 function groupIntoSessions(sales: SaleEntry[]): TranscriptionGroup[] {
   const grouped = new Map<string, TranscriptionGroup>();
@@ -403,6 +403,15 @@ function SaleSessionCard({
       .join(", ") +
     (group.items.length > 3 ? ` +${group.items.length - 3}` : "");
 
+  function formatDate(date: Date | null) {
+    if (!date) return "";
+    return new Date(date).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  }
+
   return (
     <div
       className={`bg-white border rounded-2xl overflow-hidden transition-all duration-200 ${expanded ? "border-[#1e1e1e]/60 shadow-md shadow-[#171717]/[0.08]" : "border-[#f0f0f0] hover:border-[#1e1e1e]/40"}`}
@@ -582,8 +591,6 @@ export default function SalesClient({
   totalRevenue,
   totalItems,
 }: SalesClientProps) {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
@@ -618,6 +625,14 @@ export default function SalesClient({
     dateTo,
   };
 
+  function formatDate(date: Date | null) {
+    if (!date) return "";
+    return new Date(date).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  }
   const navigate = (overrides: Record<string, string>) => {
     startTransition(() => {
       router.push(buildUrl(currentFilters, overrides));
