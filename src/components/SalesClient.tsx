@@ -122,16 +122,19 @@ function formatTime(date: Date | null) {
   });
 }
 
-// function formatDate(date: Date | null) {
-//   if (!date) return "";
-//   const today = new Date();
-//   const yesterday = new Date(today);
-//   yesterday.setDate(today.getDate() - 1);
-//   const d = new Date(date);
-//   if (d.toDateString() === today.toDateString()) return "Today";
-//   if (d.toDateString() === yesterday.toDateString()) return "Yesterday";
-//   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-// }
+// ── FIXED: takes todayStr and yesterdayStr as params so no new Date() during render ──
+function formatDate(
+  date: Date | null,
+  todayStr?: string,
+  yesterdayStr?: string,
+) {
+  if (!date) return "";
+  const d = new Date(date);
+  const dStr = d.toDateString();
+  if (todayStr && dStr === todayStr) return "Today";
+  if (yesterdayStr && dStr === yesterdayStr) return "Yesterday";
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
 
 function groupIntoSessions(sales: SaleEntry[]): TranscriptionGroup[] {
   const grouped = new Map<string, TranscriptionGroup>();
@@ -205,12 +208,6 @@ function buildUrl(
   }
   return `/sales?${params.toString()}`;
 }
-
-// ─────────────────────────────────────────────
-// Export helper
-// ─────────────────────────────────────────────
-
-// ── Export ──
 
 // ─────────────────────────────────────────────
 // Sub-components
@@ -381,18 +378,23 @@ function SaleItemRow({
 }
 
 // Session card (expandable)
+// ── FIXED: receives todayStr/yesterdayStr so formatDate is stable on SSR ──
 function SaleSessionCard({
   group,
   sheetName,
   currencyCode,
   onUpdateItem,
   onDeleteItem,
+  todayStr,
+  yesterdayStr,
 }: {
   group: TranscriptionGroup;
   sheetName: string;
   currencyCode: string;
   onUpdateItem: (id: string, field: "name" | "price", value: string) => void;
   onDeleteItem: (id: string) => void;
+  todayStr: string;
+  yesterdayStr: string;
 }) {
   const [expanded, setExpanded] = useState(false);
   const liveTotal = group.items.reduce((s, i) => s + i.price, 0);
@@ -402,15 +404,6 @@ function SaleSessionCard({
       .slice(0, 3)
       .join(", ") +
     (group.items.length > 3 ? ` +${group.items.length - 3}` : "");
-
-  function formatDate(date: Date | null) {
-    if (!date) return "";
-    return new Date(date).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  }
 
   return (
     <div
@@ -423,7 +416,7 @@ function SaleSessionCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1 flex-wrap">
             <span className="text-[10px] font-medium text-[#171717]/30 uppercase tracking-widest">
-              {formatDate(group.createdAt)}
+              {formatDate(group.createdAt, todayStr, yesterdayStr)}
             </span>
             <span className="text-[#171717]/15">·</span>
             <span className="text-[10px] text-[#171717]/30">
@@ -594,6 +587,18 @@ export default function SalesClient({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
+  // ── FIXED: stable date strings computed only on the client after mount ──
+  const [todayStr, setTodayStr] = useState<string>("");
+  const [yesterdayStr, setYesterdayStr] = useState<string>("");
+
+  useEffect(() => {
+    const now = new Date();
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    setTodayStr(now.toDateString());
+    setYesterdayStr(yesterday.toDateString());
+  }, []);
+
   // Local sort state (client-only — data already filtered server-side)
   const [sortField, setSortField] = useState<SortField>("qty");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
@@ -625,14 +630,6 @@ export default function SalesClient({
     dateTo,
   };
 
-  function formatDate(date: Date | null) {
-    if (!date) return "";
-    return new Date(date).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  }
   const navigate = (overrides: Record<string, string>) => {
     startTransition(() => {
       router.push(buildUrl(currentFilters, overrides));
@@ -684,11 +681,14 @@ export default function SalesClient({
 
   // ── Session grouping ──
   const sessions = useMemo(() => groupIntoSessions(localSales), [localSales]);
+
+  // ── FIXED: sessionsByDate depends on todayStr/yesterdayStr so labels are
+  //    always empty strings on the server (stable) and correct on the client ──
   const sessionsByDate = useMemo(() => {
     const groups: { label: string; sessions: typeof sessions }[] = [];
     let currentLabel = "";
     for (const s of sessions) {
-      const label = formatDate(s.createdAt);
+      const label = formatDate(s.createdAt, todayStr, yesterdayStr);
       if (label !== currentLabel) {
         currentLabel = label;
         groups.push({ label, sessions: [] });
@@ -696,20 +696,19 @@ export default function SalesClient({
       groups[groups.length - 1].sessions.push(s);
     }
     return groups;
-  }, [sessions]);
+  }, [sessions, todayStr, yesterdayStr]);
 
   const sheetMap = useMemo(
     () => new Map(sheets.map((s) => [s.id, s.name])),
     [sheets],
   );
+
   const exportToExcel = useCallback(() => {
     const wb = XLSX.utils.book_new();
 
-    // Group localSales by sheetId
     const bySheet = new Map<string, SaleEntry[]>();
 
     if (activeSheet === "all") {
-      // One xlsx-sheet per sale-sheet
       for (const sheet of sheets) {
         bySheet.set(sheet.id, []);
       }
@@ -724,28 +723,17 @@ export default function SalesClient({
     for (const [sheetId, entries] of bySheet.entries()) {
       const sheetName = sheetMap.get(sheetId) ?? sheetId.slice(0, 8);
       const rows = entries.map((s) => ({
-        // ID: s.id,
         "Item Name": s.name,
         Price: s.price,
         Date: s.createdAt ? new Date(s.createdAt).toLocaleDateString() : "",
-        // Time: s.createdAt ? new Date(s.createdAt).toLocaleTimeString() : "",
         Transcription: s.transcriptionText ?? "",
       }));
 
       const ws = XLSX.utils.json_to_sheet(rows);
 
-      // Auto column widths
-      const colWidths = [
-        // { wch: 36 }, // ID
-        { wch: 28 }, // Item Name
-        { wch: 12 }, // Price
-        { wch: 14 }, // Date
-        // { wch: 12 }, // Time
-        { wch: 50 }, // Transcription
-      ];
+      const colWidths = [{ wch: 28 }, { wch: 12 }, { wch: 14 }, { wch: 50 }];
       ws["!cols"] = colWidths;
 
-      // Sanitise sheet name (Excel limit: 31 chars, no special chars)
       const safeName = sheetName.replace(/[:\\/?*[\]]/g, "").slice(0, 31);
       XLSX.utils.book_append_sheet(wb, ws, safeName || "Sheet");
     }
@@ -1194,6 +1182,8 @@ export default function SalesClient({
                         currencyCode={currencyCode}
                         onUpdateItem={handleUpdateItem}
                         onDeleteItem={handleDeleteItem}
+                        todayStr={todayStr}
+                        yesterdayStr={yesterdayStr}
                       />
                     ))}
                   </div>

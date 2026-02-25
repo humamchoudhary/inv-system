@@ -2,7 +2,7 @@
 
 // src/app/(protected)/dashboard/DashboardClient.tsx
 
-import { useMemo, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   ChevronLeft,
@@ -234,9 +234,13 @@ function Ambient() {
 function TrendChart({
   data,
   currencyCode,
+
+  todayStr,
 }: {
   data: { label: string; revenue: number; date: string }[];
   currencyCode: string;
+
+  todayStr: string;
 }) {
   const max = Math.max(...data.map((d) => d.revenue), 1);
   const hasData = data.some((d) => d.revenue > 0);
@@ -250,7 +254,8 @@ function TrendChart({
       <div className="relative h-28 w-full flex items-end gap-px">
         {data.map((d, i) => {
           const heightPct = max > 0 ? (d.revenue / max) * 100 : 0;
-          const isToday = d.date === new Date().toISOString().split("T")[0];
+
+          const isToday = !!todayStr && d.date === todayStr;
           return (
             <div
               key={d.date}
@@ -402,6 +407,12 @@ export default function DashboardClient({
     const base = { sheet: activeSheet, date: dateFilter };
     startTransition(() => router.push(buildUrl({ ...base, ...overrides })));
   };
+
+  const [todayStr, setTodayStr] = useState<string>("");
+
+  useEffect(() => {
+    setTodayStr(new Date().toISOString().split("T")[0]);
+  }, []);
 
   // Derived data (all client-side since already filtered server-side)
   const trendData = useMemo(
@@ -632,7 +643,11 @@ export default function DashboardClient({
               </span>
             </div>
           </div>
-          <TrendChart data={trendData} currencyCode={currencyCode} />
+          <TrendChart
+            data={trendData}
+            currencyCode={currencyCode}
+            todayStr={todayStr}
+          />
         </div>
 
         {/* ── Item breakdown ── */}

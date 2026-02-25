@@ -15,12 +15,14 @@ FROM node:20-alpine AS base
 #     TZ=UTC \
 ENV NEXT_TELEMETRY_DISABLED=1
 
-RUN apk add --no-cache libc6-compat
+# RUN apk add --no-cache libc6-compat
 
 
 
 # ---------- Dependencies ----------
 FROM base AS deps
+
+RUN apk add --no-cache libc6-compat
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
