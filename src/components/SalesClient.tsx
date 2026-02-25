@@ -1,11 +1,5 @@
 "use client";
 
-// src/app/(protected)/sales/SalesClient.tsx
-// All filtering is server-side. This client component only handles:
-// - URL navigation (filter changes → router.push → server re-fetches)
-// - Optimistic inline edits (name/price via API)
-// - UI state: expanded cards, view mode toggle
-
 import {
   useState,
   useMemo,
@@ -84,7 +78,6 @@ interface SalesClientProps {
   sales: SaleEntry[];
   currencyCode: string;
   businessName: string;
-  // Server-resolved filter state
   activeSheet: string;
   dateFilter: string;
   viewMode: string;
@@ -122,12 +115,8 @@ function formatTime(date: Date | null) {
   });
 }
 
-// ── FIXED: takes todayStr and yesterdayStr as params so no new Date() during render ──
-function formatDate(
-  date: Date | null,
-  todayStr?: string,
-  yesterdayStr?: string,
-) {
+// ── FIXED: accepts pre-computed stable strings, never calls new Date() here ──
+function formatDate(date: Date | null, todayStr: string, yesterdayStr: string) {
   if (!date) return "";
   const d = new Date(date);
   const dStr = d.toDateString();
@@ -234,7 +223,6 @@ function EmptyState({ message, sub }: { message: string; sub?: string }) {
   );
 }
 
-// InlineEdit for optimistic updates
 function InlineEdit({
   value,
   type = "text",
@@ -317,7 +305,6 @@ function InlineEdit({
   );
 }
 
-// Sale item row in expanded session
 function SaleItemRow({
   item,
   onUpdate,
@@ -377,8 +364,7 @@ function SaleItemRow({
   );
 }
 
-// Session card (expandable)
-// ── FIXED: receives todayStr/yesterdayStr so formatDate is stable on SSR ──
+// ── FIXED: todayStr/yesterdayStr passed as props, never derived inside ──
 function SaleSessionCard({
   group,
   sheetName,
@@ -419,6 +405,7 @@ function SaleSessionCard({
               {formatDate(group.createdAt, todayStr, yesterdayStr)}
             </span>
             <span className="text-[#171717]/15">·</span>
+            {/* ── FIXED: formatTime is locale-independent (hours/minutes only) so safe ── */}
             <span className="text-[10px] text-[#171717]/30">
               {formatTime(group.createdAt)}
             </span>
@@ -434,7 +421,7 @@ function SaleSessionCard({
           </p>
           {group.transcriptionText && (
             <p className="text-xs text-[#171717]/30 italic mt-0.5 truncate">
-              "{group.transcriptionText}"
+              &quot;{group.transcriptionText}&quot;
             </p>
           )}
         </div>
@@ -486,7 +473,6 @@ function SaleSessionCard({
   );
 }
 
-// Item summary row for "By Item" view
 function ItemRow({
   item,
   currencyCode,
@@ -530,7 +516,6 @@ function ItemRow({
   );
 }
 
-// Sort button for "By Item" header
 function SortBtn({
   label,
   field,
@@ -587,9 +572,10 @@ export default function SalesClient({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
-  // ── FIXED: stable date strings computed only on the client after mount ──
+  // ── FIXED: always start as empty strings (matches SSR), set after mount ──
   const [todayStr, setTodayStr] = useState<string>("");
   const [yesterdayStr, setYesterdayStr] = useState<string>("");
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     const now = new Date();
@@ -597,28 +583,24 @@ export default function SalesClient({
     yesterday.setDate(now.getDate() - 1);
     setTodayStr(now.toDateString());
     setYesterdayStr(yesterday.toDateString());
+    setMounted(true);
   }, []);
 
-  // Local sort state (client-only — data already filtered server-side)
   const [sortField, setSortField] = useState<SortField>("qty");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
 
-  // Optimistic local mutations
   const [localSales, setLocalSales] = useState<SaleEntry[]>(sales);
   useEffect(() => {
     setLocalSales(sales);
   }, [sales]);
 
-  // Advanced filter panel visibility
   const [showFilters, setShowFilters] = useState(false);
-  // Draft filter inputs (committed on search button or enter)
   const [draftQ, setDraftQ] = useState(searchQuery);
   const [draftMin, setDraftMin] = useState(minPrice);
   const [draftMax, setDraftMax] = useState(maxPrice);
   const [draftDateFrom, setDraftDateFrom] = useState(dateFrom);
   const [draftDateTo, setDraftDateTo] = useState(dateTo);
 
-  // Current filter state passed from server
   const currentFilters = {
     sheet: activeSheet,
     date: dateFilter,
@@ -655,7 +637,6 @@ export default function SalesClient({
     navigate({ q: "", minPrice: "", maxPrice: "", dateFrom: "", dateTo: "" });
   };
 
-  // ── Item sort (client-side on already-filtered data) ──
   const itemSummaries = useMemo(() => {
     const raw = buildItemSummary(localSales, totalRevenue);
     return [...raw].sort((a, b) => {
@@ -679,11 +660,12 @@ export default function SalesClient({
     }
   };
 
-  // ── Session grouping ──
   const sessions = useMemo(() => groupIntoSessions(localSales), [localSales]);
 
-  // ── FIXED: sessionsByDate depends on todayStr/yesterdayStr so labels are
-  //    always empty strings on the server (stable) and correct on the client ──
+  // ── FIXED: sessionsByDate depends on todayStr/yesterdayStr which are stable
+  //    empty strings on SSR, so the date labels are always "" on first render.
+  //    After mount they fill in correctly. This eliminates the mismatch where
+  //    server renders "Feb 24" and client renders "Feb 25". ──
   const sessionsByDate = useMemo(() => {
     const groups: { label: string; sessions: typeof sessions }[] = [];
     let currentLabel = "";
@@ -705,13 +687,10 @@ export default function SalesClient({
 
   const exportToExcel = useCallback(() => {
     const wb = XLSX.utils.book_new();
-
     const bySheet = new Map<string, SaleEntry[]>();
 
     if (activeSheet === "all") {
-      for (const sheet of sheets) {
-        bySheet.set(sheet.id, []);
-      }
+      for (const sheet of sheets) bySheet.set(sheet.id, []);
       for (const sale of localSales) {
         if (!bySheet.has(sale.sheetId)) bySheet.set(sale.sheetId, []);
         bySheet.get(sale.sheetId)!.push(sale);
@@ -728,12 +707,8 @@ export default function SalesClient({
         Date: s.createdAt ? new Date(s.createdAt).toLocaleDateString() : "",
         Transcription: s.transcriptionText ?? "",
       }));
-
       const ws = XLSX.utils.json_to_sheet(rows);
-
-      const colWidths = [{ wch: 28 }, { wch: 12 }, { wch: 14 }, { wch: 50 }];
-      ws["!cols"] = colWidths;
-
+      ws["!cols"] = [{ wch: 28 }, { wch: 12 }, { wch: 14 }, { wch: 50 }];
       const safeName = sheetName.replace(/[:\\/?*[\]]/g, "").slice(0, 31);
       XLSX.utils.book_append_sheet(wb, ws, safeName || "Sheet");
     }
@@ -742,7 +717,6 @@ export default function SalesClient({
     XLSX.writeFile(wb, `sales-export-${dateTag}.xlsx`);
   }, [localSales, activeSheet, sheets, sheetMap]);
 
-  // ── Mutations ──
   const handleUpdateItem = useCallback(
     async (id: string, field: "name" | "price", value: string) => {
       setLocalSales((prev) =>
@@ -819,8 +793,6 @@ export default function SalesClient({
           {isPending && (
             <Loader2 className="w-4 h-4 text-[#171717] animate-spin" />
           )}
-
-          {/* Export button */}
           <button
             onClick={() => exportToExcel()}
             disabled={localSales.length === 0}
@@ -830,7 +802,6 @@ export default function SalesClient({
             <Download className="w-3.5 h-3.5" />
             Export
           </button>
-
           <a
             href="/record"
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#171717] text-white text-xs font-semibold shadow-md shadow-[#171717]/30 hover:bg-[#171717]/90 active:scale-[0.97] transition-all duration-200"
@@ -902,7 +873,6 @@ export default function SalesClient({
             Sheet
           </p>
           <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
-            {/* All tab */}
             <button
               onClick={() => navigate({ sheet: "all" })}
               className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold border transition-all duration-150 ${activeSheet === "all" ? "bg-[#171717] text-white border-[#171717] shadow-sm" : "bg-white text-[#171717]/50 border-[#f0f0f0] hover:border-[#1e1e1e]/50 hover:text-[#171717]/70"}`}
@@ -929,7 +899,7 @@ export default function SalesClient({
         className="relative z-10 px-5 mt-4 flex flex-col gap-3"
         style={{ animation: "fadeUp 0.4s 0.1s ease both" }}
       >
-        {/* Row 1: date pills — full-width scrollable row */}
+        {/* Row 1: date pills */}
         <div className="flex gap-1.5 overflow-x-auto scrollbar-hide -mx-5 px-5">
           {DATE_OPTIONS.map((f) => {
             const hasCustomDate = !!(dateFrom || dateTo);
@@ -956,7 +926,6 @@ export default function SalesClient({
 
         {/* Row 2: filter button + view toggle */}
         <div className="flex items-center justify-between gap-2">
-          {/* Filter toggle */}
           <button
             onClick={() => setShowFilters((v) => !v)}
             className={`relative flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-150 ${showFilters || activeFilterCount > 0 ? "bg-[#171717]/10 text-[#171717] border-[#171717]/30" : "bg-[#f0f0f0]/70 text-[#171717]/50 border-transparent"}`}
@@ -970,7 +939,6 @@ export default function SalesClient({
             )}
           </button>
 
-          {/* View toggle */}
           <div className="flex items-center rounded-xl bg-[#f0f0f0]/70 p-0.5">
             <button
               onClick={() => navigate({ view: "by-sale" })}
@@ -1018,7 +986,6 @@ export default function SalesClient({
             </div>
 
             <div className="p-4 flex flex-col gap-4">
-              {/* Item name */}
               <div>
                 <label className="flex items-center gap-1.5 text-[10px] font-semibold text-[#171717]/40 uppercase tracking-wider mb-2">
                   <Tag className="w-3 h-3" /> Item name
@@ -1036,7 +1003,6 @@ export default function SalesClient({
                 </div>
               </div>
 
-              {/* Price range */}
               <div>
                 <label className="flex items-center gap-1.5 text-[10px] font-semibold text-[#171717]/40 uppercase tracking-wider mb-2">
                   <DollarSign className="w-3 h-3" /> Price range
@@ -1060,7 +1026,6 @@ export default function SalesClient({
                 </div>
               </div>
 
-              {/* Custom date range */}
               <div>
                 <label className="flex items-center gap-1.5 text-[10px] font-semibold text-[#171717]/40 uppercase tracking-wider mb-2">
                   <CalendarDays className="w-3 h-3" /> Custom date range
@@ -1087,7 +1052,6 @@ export default function SalesClient({
                 )}
               </div>
 
-              {/* Apply button */}
               <button
                 onClick={applySearch}
                 disabled={isPending}
@@ -1109,7 +1073,8 @@ export default function SalesClient({
           <div className="flex flex-wrap gap-2">
             {searchQuery && (
               <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#171717]/10 border border-[#171717]/20 text-[10px] text-[#171717] font-medium">
-                <Tag className="w-2.5 h-2.5" />"{searchQuery}"
+                <Tag className="w-2.5 h-2.5" />
+                &quot;{searchQuery}&quot;
                 <button
                   onClick={() => {
                     setDraftQ("");
@@ -1167,28 +1132,43 @@ export default function SalesClient({
               sub="Try changing your filters or record a new sale"
             />
           ) : (
+            // ── FIXED: suppress until mounted so date labels are stable ──
             <div className="flex flex-col gap-5">
-              {sessionsByDate.map(({ label, sessions: daySessions }) => (
-                <div key={label}>
-                  <p className="text-[10px] font-semibold text-[#171717]/25 uppercase tracking-widest mb-2">
-                    {label}
-                  </p>
-                  <div className="flex flex-col gap-2">
-                    {daySessions.map((group) => (
-                      <SaleSessionCard
-                        key={group.key}
-                        group={group}
-                        sheetName={sheetMap.get(group.sheetId) ?? "Sheet"}
-                        currencyCode={currencyCode}
-                        onUpdateItem={handleUpdateItem}
-                        onDeleteItem={handleDeleteItem}
-                        todayStr={todayStr}
-                        yesterdayStr={yesterdayStr}
-                      />
-                    ))}
-                  </div>
-                </div>
-              ))}
+              {mounted
+                ? sessionsByDate.map(({ label, sessions: daySessions }) => (
+                    <div key={label}>
+                      <p className="text-[10px] font-semibold text-[#171717]/25 uppercase tracking-widest mb-2">
+                        {label}
+                      </p>
+                      <div className="flex flex-col gap-2">
+                        {daySessions.map((group) => (
+                          <SaleSessionCard
+                            key={group.key}
+                            group={group}
+                            sheetName={sheetMap.get(group.sheetId) ?? "Sheet"}
+                            currencyCode={currencyCode}
+                            onUpdateItem={handleUpdateItem}
+                            onDeleteItem={handleDeleteItem}
+                            todayStr={todayStr}
+                            yesterdayStr={yesterdayStr}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  ))
+                : // Before mount: render cards without date group headers to match SSR
+                  sessions.map((group) => (
+                    <SaleSessionCard
+                      key={group.key}
+                      group={group}
+                      sheetName={sheetMap.get(group.sheetId) ?? "Sheet"}
+                      currencyCode={currencyCode}
+                      onUpdateItem={handleUpdateItem}
+                      onDeleteItem={handleDeleteItem}
+                      todayStr=""
+                      yesterdayStr=""
+                    />
+                  ))}
             </div>
           ))}
 

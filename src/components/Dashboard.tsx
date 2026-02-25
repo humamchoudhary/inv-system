@@ -1,7 +1,5 @@
 "use client";
 
-// src/app/(protected)/dashboard/DashboardClient.tsx
-
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -16,7 +14,7 @@ import {
 } from "lucide-react";
 
 // ─────────────────────────────────────────────
-// Types (exported so page.tsx can import them)
+// Types
 // ─────────────────────────────────────────────
 
 export type SheetSummary = {
@@ -29,7 +27,7 @@ export type SaleRow = {
   id: string;
   name: string;
   price: number;
-  createdAt: string | null; // ISO string — safe to serialise from server
+  createdAt: string | null;
   sheetId: string;
 };
 
@@ -69,9 +67,7 @@ function fmt(amount: number, code = "USD") {
 
 function fmtCompact(amount: number, code = "USD") {
   try {
-    // Only show decimal if it's not a whole number
     const hasDecimals = amount % 1 !== 0;
-
     return new Intl.NumberFormat("en", {
       style: "currency",
       currency: code,
@@ -92,7 +88,6 @@ function buildUrl(params: Record<string, string>) {
   return `/dashboard?${p.toString()}`;
 }
 
-// Build daily revenue buckets for the trend chart
 function buildTrendData(
   sales: SaleRow[],
   dateFilter: string,
@@ -104,7 +99,7 @@ function buildTrendData(
   if (dateFilter === "today") days = 1;
   else if (dateFilter === "week") days = 7;
   else if (dateFilter === "month") days = 30;
-  else days = 30; // "all" — show last 30 days of trend
+  else days = 30;
 
   const buckets: { label: string; revenue: number; date: string }[] = [];
   for (let i = days - 1; i >= 0; i--) {
@@ -133,7 +128,6 @@ function buildTrendData(
   return buckets;
 }
 
-// Build item breakdown
 function buildItemBreakdown(
   sales: SaleRow[],
   totalRevenue: number,
@@ -158,10 +152,9 @@ function buildItemBreakdown(
       pct: totalRevenue > 0 ? (v.revenue / totalRevenue) * 100 : 0,
     }))
     .sort((a, b) => b.revenue - a.revenue)
-    .slice(0, 8); // top 8 items
+    .slice(0, 8);
 }
 
-// Generate plain-language insights
 function generateInsights(
   revenueChange: number | null,
   itemsChange: number | null,
@@ -228,48 +221,58 @@ function Ambient() {
 }
 
 // ─────────────────────────────────────────────
-// Mini Sparkline Bar Chart (pure CSS/SVG)
+// TrendChart
+// ── FIXED: todayStr is "" on SSR and first render.
+//    Tooltip is now always rendered in the DOM (opacity-0 when hidden),
+//    so the element count never differs between server and client.
 // ─────────────────────────────────────────────
 
 function TrendChart({
   data,
   currencyCode,
-
   todayStr,
 }: {
   data: { label: string; revenue: number; date: string }[];
   currencyCode: string;
-
   todayStr: string;
 }) {
   const max = Math.max(...data.map((d) => d.revenue), 1);
   const hasData = data.some((d) => d.revenue > 0);
-  const totalBars = data.length;
-  const barW = 100 / totalBars;
-  const gap = 0.6; // percentage gap between bars
 
   return (
     <div className="w-full">
-      {/* Chart area */}
       <div className="relative h-28 w-full flex items-end gap-px">
         {data.map((d, i) => {
           const heightPct = max > 0 ? (d.revenue / max) * 100 : 0;
-
+          // ── FIXED: only mark as today after mount (todayStr="" on SSR) ──
           const isToday = !!todayStr && d.date === todayStr;
+
           return (
             <div
               key={d.date}
               className="group relative flex-1 flex flex-col justify-end"
             >
-              {/* Tooltip */}
-              {d.revenue > 0 && (
-                <div className="absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none z-10 whitespace-nowrap">
-                  <div className="px-2 py-1 rounded-lg bg-[#171717] text-white text-[10px] font-medium shadow-lg">
-                    {fmtCompact(d.revenue, currencyCode)}
-                  </div>
-                  <div className="w-1.5 h-1.5 bg-[#171717] rotate-45 mx-auto -mt-[3px]" />
+              {/*
+               * ── FIXED: tooltip is ALWAYS rendered, toggled via opacity/pointer-events.
+               *    Previously it was conditionally rendered with {d.revenue > 0 && ...}
+               *    which caused a DOM structure mismatch: SSR rendered 0 tooltip divs
+               *    (todayStr="" so isToday=false but tooltip was gated on d.revenue>0
+               *    which IS known server-side), while client re-evaluated after mount.
+               *    Now the element is always present, just invisible when revenue=0.
+               ── */}
+              <div
+                className={`absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 transition-opacity duration-150 pointer-events-none z-10 whitespace-nowrap ${
+                  d.revenue > 0
+                    ? "opacity-0 group-hover:opacity-100"
+                    : "opacity-0"
+                }`}
+              >
+                <div className="px-2 py-1 rounded-lg bg-[#171717] text-white text-[10px] font-medium shadow-lg">
+                  {fmtCompact(d.revenue, currencyCode)}
                 </div>
-              )}
+                <div className="w-1.5 h-1.5 bg-[#171717] rotate-45 mx-auto -mt-[3px]" />
+              </div>
+
               {/* Bar */}
               <div
                 className={`w-full rounded-t-sm transition-all duration-500 ${
@@ -294,7 +297,7 @@ function TrendChart({
       </div>
 
       {/* X-axis labels */}
-      <div className="flex mt-2" style={{ gap: 0 }}>
+      <div className="flex mt-2">
         {data.map((d) => (
           <div key={d.date} className="flex-1 text-center">
             <span className="text-[9px] text-[#171717]/25 leading-none">
@@ -344,9 +347,7 @@ function KpiCard({
       <p className="text-[10px] font-medium text-[#171717]/40 uppercase tracking-widest">
         {label}
       </p>
-      <p
-        className={`text-xl font-bold tracking-tight tabular-nums ${highlight ? "text-[#171717]" : "text-[#171717]"}`}
-      >
+      <p className="text-xl font-bold tracking-tight tabular-nums text-[#171717]">
         {value}
       </p>
       {(sub || showChange) && (
@@ -408,13 +409,14 @@ export default function DashboardClient({
     startTransition(() => router.push(buildUrl({ ...base, ...overrides })));
   };
 
+  // ── FIXED: start as "" (matches SSR output of TrendChart),
+  //    set after mount so todayStr is stable across server/client ──
   const [todayStr, setTodayStr] = useState<string>("");
 
   useEffect(() => {
     setTodayStr(new Date().toISOString().split("T")[0]);
   }, []);
 
-  // Derived data (all client-side since already filtered server-side)
   const trendData = useMemo(
     () => buildTrendData(currentSales, dateFilter),
     [currentSales, dateFilter],
@@ -446,10 +448,6 @@ export default function DashboardClient({
         : dateFilter === "month"
           ? "Last 30 days"
           : "Previous period";
-
-  // ─────────────────────────────────────────────
-  // Render
-  // ─────────────────────────────────────────────
 
   return (
     <main className="min-h-screen w-full bg-[#ffffff] flex flex-col font-[family-name:var(--font-geist-sans)] overflow-hidden">
@@ -553,7 +551,6 @@ export default function DashboardClient({
           className="w-full rounded-3xl bg-[#171717] overflow-hidden relative"
           style={{ animation: "fadeUp 0.4s 0.1s ease both" }}
         >
-          {/* Glow */}
           <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-[#171717] opacity-20 blur-[60px] pointer-events-none" />
           <div className="absolute -bottom-8 -left-8 w-32 h-32 rounded-full bg-[#1e1e1e] opacity-10 blur-[40px] pointer-events-none" />
           <div
@@ -564,7 +561,6 @@ export default function DashboardClient({
               backgroundSize: "16px 16px",
             }}
           />
-
           <div className="relative z-10 px-6 py-5">
             <p className="text-[10px] font-medium text-white/40 uppercase tracking-widest mb-1">
               Total Revenue
@@ -667,12 +663,9 @@ export default function DashboardClient({
                 key={item.name}
                 className="flex items-center gap-4 px-5 py-3.5 border-b border-[#f0f0f0] last:border-0 hover:bg-[#fdfcff] transition-colors duration-100"
               >
-                {/* Rank */}
                 <span className="text-[10px] font-bold text-[#171717]/20 w-4 shrink-0 tabular-nums">
                   {idx + 1}
                 </span>
-
-                {/* Name + bar */}
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-[#171717] truncate capitalize">
                     {item.name}
@@ -689,8 +682,6 @@ export default function DashboardClient({
                     </span>
                   </div>
                 </div>
-
-                {/* Stats */}
                 <div className="flex flex-col items-end shrink-0">
                   <p className="text-sm font-bold text-[#171717] tabular-nums">
                     {fmt(item.revenue, currencyCode)}
@@ -716,7 +707,7 @@ export default function DashboardClient({
             {insights.map((insight, i) => (
               <div
                 key={i}
-                className="flex items-start gap-3 px-4 py-3.5 rounded-2xl bg-[#] border border-[#1e1e1e]/30"
+                className="flex items-start gap-3 px-4 py-3.5 rounded-2xl border border-[#1e1e1e]/30"
               >
                 <div className="w-7 h-7 rounded-xl bg-[#171717]/15 flex items-center justify-center shrink-0 mt-0.5">
                   <Lightbulb className="w-3.5 h-3.5 text-[#171717]" />
