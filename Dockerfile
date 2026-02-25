@@ -6,12 +6,12 @@ RUN apk add --no-cache \
         icu-data-full \
         tzdata \
         libc6-compat && \
-    echo 'export LC_ALL=es_US.UTF-8' >> /etc/profile.d/locale.sh && \
-    sed -i 's|LANG=C.UTF-8|LANG=es_US.UTF-8|' /etc/profile.d/locale.sh
+    echo 'export LC_ALL=en_US.UTF-8' >> /etc/profile.d/locale.sh && \
+    sed -i 's|LANG=en_US.UTF-8|LANG=en_US.UTF-8|' /etc/profile.d/locale.sh
 
-ENV LANG=es_ES.UTF-8 \
-    LANGUAGE=es_ES:es \
-    LC_ALL=es_ES.UTF-8 \
+ENV LANG=en_US.UTF-8 \
+    LANGUAGE=en_US:us \
+    LC_ALL=en_US.UTF-8 \
     TZ=UTC \
     NEXT_TELEMETRY_DISABLED=1
 
