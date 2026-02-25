@@ -13,14 +13,17 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 COPY --from=deps /app/node_modules ./node_modules
-RUN apk add --no-cache icu-data-full tzdata
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_OPTIONS="--max-old-space-size=4096"
 
 
-ENV LANG=en_US.UTF-8
-ENV LC_ALL=en_US.UTF-8
+RUN apk add --no-cache icu-data-full tzdata libc6-compat
+
+# Optional: set environment variables for Spanish
+ENV LANG=es_US.UTF-8
+ENV LANGUAGE=es_US:us
+ENV LC_ALL=es_US.UTF-8
 # Build the application
 RUN npm run build
 
@@ -32,13 +35,12 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 # RUN apk add --no-cache icu-data-full tzdata libc6-compat
 
-RUN apt-get update && apt-get install -y locales && rm -rf /var/lib/apt/lists/* \
-    && locale-gen "es_US.UTF-8"
+RUN apk add --no-cache icu-data-full tzdata libc6-compat
 
-# Set the environment variables for Spanish (Spain)
-ENV LANG es_US.UTF-8
-ENV LANGUAGE es_US:us
-ENV LC_ALL es_US.UTF-8
+# Optional: set environment variables for Spanish
+ENV LANG=es_US.UTF-8
+ENV LANGUAGE=es_US:us
+ENV LC_ALL=es_US.UTF-8
 
 
 # ARG GEMINI_API_KEY
