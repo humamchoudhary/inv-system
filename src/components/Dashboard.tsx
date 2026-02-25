@@ -92,8 +92,12 @@ function buildTrendData(
   sales: SaleRow[],
   dateFilter: string,
 ): { label: string; revenue: number; date: string }[] {
-  const today = new Date();
-  today.setHours(23, 59, 59, 999);
+  const now = new Date();
+  // Get current UTC date components
+  const utcYear = now.getUTCFullYear();
+  const utcMonth = now.getUTCMonth();
+  const utcDay = now.getUTCDate();
+  const utcToday = new Date(Date.UTC(utcYear, utcMonth, utcDay));
 
   let days = 7;
   if (dateFilter === "today") days = 1;
@@ -103,24 +107,31 @@ function buildTrendData(
 
   const buckets: { label: string; revenue: number; date: string }[] = [];
   for (let i = days - 1; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    d.setHours(0, 0, 0, 0);
+    const d = new Date(utcToday);
+    d.setUTCDate(d.getUTCDate() - i);
     const dateStr = d.toISOString().split("T")[0];
     const label =
       days <= 7
-        ? d.toLocaleDateString("en-US", { weekday: "short" })
+        ? d.toLocaleDateString("en-US", { weekday: "short", timeZone: "UTC" })
         : days <= 14
-          ? d.toLocaleDateString("en-US", { month: "short", day: "numeric" })
+          ? d.toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              timeZone: "UTC",
+            })
           : i % 5 === 0
-            ? d.toLocaleDateString("en-US", { month: "short", day: "numeric" })
+            ? d.toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+                timeZone: "UTC",
+              })
             : "";
     buckets.push({ label, revenue: 0, date: dateStr });
   }
 
   for (const sale of sales) {
     if (!sale.createdAt) continue;
-    const dateStr = sale.createdAt.split("T")[0];
+    const dateStr = sale.createdAt.split("T")[0]; // UTC date part
     const bucket = buckets.find((b) => b.date === dateStr);
     if (bucket) bucket.revenue += sale.price;
   }

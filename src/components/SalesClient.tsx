@@ -667,6 +667,11 @@ export default function SalesClient({
   //    After mount they fill in correctly. This eliminates the mismatch where
   //    server renders "Feb 24" and client renders "Feb 25". ──
   const sessionsByDate = useMemo(() => {
+    // If not mounted yet (SSR), return ungrouped sessions to match server render
+    if (!mounted) {
+      return sessions.map((s) => ({ label: "", sessions: [s] }));
+    }
+
     const groups: { label: string; sessions: typeof sessions }[] = [];
     let currentLabel = "";
     for (const s of sessions) {
@@ -678,7 +683,7 @@ export default function SalesClient({
       groups[groups.length - 1].sessions.push(s);
     }
     return groups;
-  }, [sessions, todayStr, yesterdayStr]);
+  }, [sessions, todayStr, yesterdayStr, mounted]);
 
   const sheetMap = useMemo(
     () => new Map(sheets.map((s) => [s.id, s.name])),
@@ -1132,47 +1137,36 @@ export default function SalesClient({
               sub="Try changing your filters or record a new sale"
             />
           ) : (
-            // ── FIXED: suppress until mounted so date labels are stable ──
             <div className="flex flex-col gap-5">
-              {mounted
-                ? sessionsByDate.map(({ label, sessions: daySessions }) => (
-                    <div key={label}>
-                      <p className="text-[10px] font-semibold text-[#171717]/25 uppercase tracking-widest mb-2">
-                        {label}
-                      </p>
-                      <div className="flex flex-col gap-2">
-                        {daySessions.map((group) => (
-                          <SaleSessionCard
-                            key={group.key}
-                            group={group}
-                            sheetName={sheetMap.get(group.sheetId) ?? "Sheet"}
-                            currencyCode={currencyCode}
-                            onUpdateItem={handleUpdateItem}
-                            onDeleteItem={handleDeleteItem}
-                            todayStr={todayStr}
-                            yesterdayStr={yesterdayStr}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  ))
-                : // Before mount: render cards without date group headers to match SSR
-                  sessions.map((group) => (
-                    <SaleSessionCard
-                      key={group.key}
-                      group={group}
-                      sheetName={sheetMap.get(group.sheetId) ?? "Sheet"}
-                      currencyCode={currencyCode}
-                      onUpdateItem={handleUpdateItem}
-                      onDeleteItem={handleDeleteItem}
-                      todayStr=""
-                      yesterdayStr=""
-                    />
-                  ))}
+              {sessionsByDate.map(({ label, sessions: daySessions }, idx) => (
+                <div key={idx}>
+                  {/* Only show the date header after mount, otherwise render an empty div with same height to prevent layout shift */}
+                  {mounted ? (
+                    <p className="text-[10px] font-semibold text-[#171717]/25 uppercase tracking-widest mb-2">
+                      {label}
+                    </p>
+                  ) : (
+                    <div className="h-[18px] mb-2" /> // Placeholder to maintain layout
+                  )}
+                  <div className="flex flex-col gap-2">
+                    {daySessions.map((group) => (
+                      <SaleSessionCard
+                        key={group.key}
+                        group={group}
+                        sheetName={sheetMap.get(group.sheetId) ?? "Sheet"}
+                        currencyCode={currencyCode}
+                        onUpdateItem={handleUpdateItem}
+                        onDeleteItem={handleDeleteItem}
+                        todayStr={mounted ? todayStr : ""}
+                        yesterdayStr={mounted ? yesterdayStr : ""}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           ))}
 
-        {/* BY ITEM */}
         {viewMode === "by-item" &&
           (itemSummaries.length === 0 ? (
             <EmptyState
