@@ -1,70 +1,48 @@
-# Dockerfile for Next.js Application (with configurable port)
+# ---------- Base (shared locale/system config) ----------
+FROM node:20-alpine AS base
+RUN apk add --no-cache \
+        musl-locales \
+        musl-locales-lang \
+        icu-data-full \
+        tzdata \
+        libc6-compat && \
+    echo 'export LC_ALL=es_US.UTF-8' >> /etc/profile.d/locale.sh && \
+    sed -i 's|LANG=C.UTF-8|LANG=es_US.UTF-8|' /etc/profile.d/locale.sh
+
+ENV LANG=es_ES.UTF-8 \
+    LANGUAGE=es_ES:es \
+    LC_ALL=es_ES.UTF-8 \
+    TZ=UTC \
+    NEXT_TELEMETRY_DISABLED=1
 
 # ---------- Dependencies ----------
-FROM node:20-alpine AS deps
-RUN apk add --no-cache libc6-compat
+FROM base AS deps
 WORKDIR /app
-
 COPY package.json package-lock.json ./
 RUN npm ci
 
 # ---------- Builder ----------
-FROM node:20-alpine AS builder
+FROM base AS builder
 WORKDIR /app
-
+ENV NODE_OPTIONS="--max-old-space-size=4096"
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-ENV NEXT_TELEMETRY_DISABLED=1
-ENV NODE_OPTIONS="--max-old-space-size=4096"
-
-
-RUN apk add --no-cache icu-data-full tzdata libc6-compat
-
-# Optional: set environment variables for Spanish
-ENV LANG=es_US.UTF-8
-ENV LANGUAGE=es_US:us
-ENV LC_ALL=es_US.UTF-8
-# Build the application
 RUN npm run build
 
 # ---------- Runner (Production) ----------
-FROM node:20-alpine AS runner
+FROM base AS runner
 WORKDIR /app
+ENV NODE_ENV=production \
+    PORT=6003 \
+    HOSTNAME="0.0.0.0"
 
-ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
-# RUN apk add --no-cache icu-data-full tzdata libc6-compat
+RUN addgroup --system --gid 1001 nextjs && \
+    adduser --system --uid 1001 nextjs
 
-RUN apk add --no-cache icu-data-full tzdata libc6-compat
-
-# Optional: set environment variables for Spanish
-ENV LANG=es_US.UTF-8
-ENV LANGUAGE=es_US:us
-ENV LC_ALL=es_US.UTF-8
-
-
-# ARG GEMINI_API_KEY
-# ENV GEMINI_API_KEY=$GEMINI_API_KEY
-# Default port (can be overridden at runtime)
-ENV PORT=6003
-ENV HOSTNAME="0.0.0.0"
-# ENV LANG=en_US.UTF-8
-# ENV LC_ALL=en_US.UTF-8
-
-
-# Create non-root user for security
-RUN addgroup --system --gid 1001 nextjs
-RUN adduser --system --uid 1001 nextjs
-
-# Copy necessary files from builder (standalone mode)
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nextjs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nextjs /app/.next/static ./.next/static
 
 USER nextjs
-
-# Expose port (actual port controlled by ENV PORT)
 EXPOSE $PORT
-
-# Start the application
 CMD ["node", "server.js"]
