@@ -401,12 +401,18 @@ function SaleSessionCard({
       >
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1 flex-wrap">
-            <span className="text-[10px] font-medium text-[#171717]/30 uppercase tracking-widest">
+            <span
+              className="text-[10px] font-medium text-[#171717]/30 uppercase tracking-widest"
+              suppressHydrationWarning
+            >
               {formatDate(group.createdAt, todayStr, yesterdayStr)}
             </span>
             <span className="text-[#171717]/15">·</span>
             {/* ── FIXED: formatTime is locale-independent (hours/minutes only) so safe ── */}
-            <span className="text-[10px] text-[#171717]/30">
+            <span
+              className="text-[10px] text-[#171717]/30"
+              suppressHydrationWarning
+            >
               {formatTime(group.createdAt)}
             </span>
             <span className="ml-auto flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#f0f0f0]/60 border border-[#f0f0f0] shrink-0">
